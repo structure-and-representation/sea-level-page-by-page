@@ -128,7 +128,7 @@ button:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visibl
 
 <header class="top">
   <h1>水位をめくる</h1>
-  <p class="tag">習作 v0.15 ・ 標高5mメッシュ</p>
+  <p class="tag">習作 v0.16 ・ 標高5mメッシュ</p>
   <p class="regions" id="regions" role="group" aria-label="場所"></p>
   <p class="lede"><span>青いところが水、灰色が土地で、低い土地ほど濃い灰色です。</span><span>紙を右へめくるたびに海面が0.25m上がり、青が重なって濃くなります。</span></p>
 </header>
@@ -275,10 +275,9 @@ function start(data) {
   frontBoard.position.set((W + 0.12) / 2, -0.04, 0); frontBoard.receiveShadow = true; frontBoard.castShadow = true;
   inner.add(frontBoard, titleSlip());
   // the land's heights are printed on the base pages in neutral greys: the lower the land, the darker
-  const mirrored = new THREE.Texture(); mirrored.wrapS = THREE.RepeatWrapping; mirrored.repeat.x = -1; mirrored.offset.x = 1; mirrored.colorSpace = THREE.SRGBColorSpace; mirrored.anisotropy = 8;
-  const heights = new THREE.TextureLoader().load(data.id + '.png', (t) => { mirrored.image = t.image; mirrored.needsUpdate = true; }); heights.colorSpace = THREE.SRGBColorSpace; heights.anisotropy = 8;
+  const heights = new THREE.TextureLoader().load(data.id + '.png'); heights.colorSpace = THREE.SRGBColorSpace; heights.anisotropy = 8;
   const landMat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: heights, roughness: 1, bumpMap: fibre, bumpScale: 0.6 });
-  const backMat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: mirrored, roughness: 1, bumpMap: fibre, bumpScale: 0.6 });
+  const backMat = new THREE.MeshStandardMaterial({ color: 0xf1f1ec, roughness: 1, bumpMap: fibre, bumpScale: 0.6 });   // the last left-hand page is blank paper
   const backing = new THREE.Mesh(new THREE.BoxGeometry(W, 0.02, H), backMat);
   backing.position.set(-W / 2, -0.01, 0); backing.receiveShadow = true;
   const base = new THREE.Mesh(new THREE.BoxGeometry(W, 0.02, H), landMat);
@@ -346,7 +345,7 @@ function start(data) {
     stencilWrite: true, stencilFunc: THREE.AlwaysStencilFunc, stencilRef: 1, stencilZPass: THREE.ReplaceStencilOp });
   seaMat.color = seaColor;
   const seaGeo = new THREE.ShapeGeometry(pageShapes(landPolys[0]), 1); seaGeo.rotateX(-Math.PI / 2);
-  for (const sx of [1, -1]) { const m = new THREE.Mesh(seaGeo, seaMat); m.scale.x = sx; m.position.y = 0.004; m.renderOrder = 1; (sx < 0 ? inner : book).add(m); }   // the mirrored copy is the right-hand page
+  { const m = new THREE.Mesh(seaGeo, seaMat); m.scale.x = -1; m.position.y = 0.004; m.renderOrder = 1; inner.add(m); }   // seaGeo is laid out for the left pile; mirrored, it fits the right-hand page
   const filmGeo = new THREE.PlaneGeometry(W, H, 64, 1);
   filmGeo.rotateX(-Math.PI / 2); filmGeo.translate(-W / 2, 0.5, 0);       // mid-thickness, inside the dyed parts
   const filmMat = new THREE.MeshStandardMaterial({ color: 0xf8f8f4, map: washiTexture(), transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide, roughness: 1 });
