@@ -128,7 +128,7 @@ button:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visibl
 
 <header class="top">
   <h1>水位をめくる</h1>
-  <p class="tag">習作 v0.14 ・ 標高5mメッシュ</p>
+  <p class="tag">習作 v0.15 ・ 標高5mメッシュ</p>
   <p class="regions" id="regions" role="group" aria-label="場所"></p>
   <p class="lede"><span>青いところが水、灰色が土地で、低い土地ほど濃い灰色です。</span><span>紙を右へめくるたびに海面が0.25m上がり、青が重なって濃くなります。</span></p>
 </header>
@@ -156,7 +156,7 @@ button:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visibl
     <div class="body">
       <dl>
         <div><dt>読み方</dt><dd>右のいちばん下の台紙が土地です。左の束は青い水の紙で、現状、海面+0.25m、+0.5m…と0.25mずつ上げながら右へめくります。<span id="rangeNote"></span>紙は薄く透ける和紙で、水が届くところだけを青で染めています。染めは重なるほど濃くなるので、右のページでは、早くから水に浸かっている場所ほど濃い青になります。左の未読の束は、紙がふんわり重なっているので白く曇って見えます。めくって右に置くと、紙が密着して澄みます。左の束は裏返す前なので、次の紙が左右反転して見えます。</dd></div>
-        <div><dt>操作</dt><dd>紙を右へドラッグ（スワイプ）するとめくれ、左へで戻ります。下の目盛りと左右の矢印キーでも動きます。「真上から見る」で、真上からの視点に切り替わります。視点は、マウスの右ドラッグか2本指でも回せます。ホイールやピンチで拡大します。</dd></div>
+        <div><dt>操作</dt><dd>開いたときに一度だけ、表紙が開いて「現状」の紙がめくれます。クリックやキーで飛ばせます。紙を右へドラッグ（スワイプ）するとめくれ、左へで戻ります。下の目盛りと左右の矢印キーでも動きます。「真上から見る」で、真上からの視点に切り替わります。視点は、マウスの右ドラッグか2本指でも回せます。ホイールやピンチで拡大します。</dd></div>
         <div><dt>注意</dt><dd>その高さの水が、海や川から地続きで届く土地だけを水にしています。堤防の高さは標高データに含まれる範囲で反映していますが、水門は閉まらない前提で、薄い防潮壁は拾えていない可能性があります。決壊や排水は扱っていません。将来の予測ではありません。</dd></div>
         <div><dt>標高</dt><dd>国土地理院 <a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>（標高タイル・基盤地図情報数値標高モデル 5mメッシュ）を加工。高さの基準は東京湾平均海面。約16mの格子に平均して簡略化しています。台紙の灰色は標高を1m刻みで塗り分けたもので、0m以下がいちばん濃く、5mより上がいちばん淡い色です。<span id="dataNote"></span></dd></div>
         <div><dt>地名</dt><dd>右のページに、代表的な地名を載せています。位置は国土地理院の<a href="https://msearch.gsi.go.jp/address-search/AddressSearch?q=%E5%BE%B3%E5%B3%B6%E9%A7%85">地名検索</a>で調べた代表点です。<span id="placeNote"></span></dd></div>
@@ -195,7 +195,7 @@ const $ = (id) => document.getElementById(id);
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const REGIONS = [['tokushima', '徳島', '吉野川の河口'], ['sendai', '仙台', '名取川の河口と仙台空港']];
 const cache = {};
-let stop = null, current = null;
+let stop = null, current = null, introSeen = false;
 $('regions').innerHTML = REGIONS.map(([id, name, sub]) => `<button type="button" data-id="${id}" aria-pressed="false"><b>${name}</b>${sub}</button>`).join('');
 async function show(id) {
   if (id === current) return;
@@ -224,6 +224,7 @@ function start(data) {
   $('dataNote').textContent = data.note; $('rangeNote').textContent = data.range; $('placeNote').textContent = data.placeNote;
   $('viewBtn').textContent = '真上から見る';
   const N = landPolys.length;
+  const playIntro = !introSeen && !reduceMotion; introSeen = true;
   let T = 0.02;                     // sheet thickness
   let SOFT = 1.2;                   // how far a turning sheet bows, in radians
   const canvas = $('stage').cloneNode(false); $('stage').replaceWith(canvas);   // a fresh canvas for each place
@@ -262,8 +263,17 @@ function start(data) {
   const book = new THREE.Group(); scene.add(book);
   // cover under both piles, the land's base page on the right, a plain backing on the left
   const coverMat = new THREE.MeshStandardMaterial({ color: 0xdcdcd6, roughness: 0.95 });
-  const cover = new THREE.Mesh(new THREE.BoxGeometry(2 * W + 0.24, 0.04, H + 0.24), coverMat);
-  cover.position.y = -0.04; cover.receiveShadow = true; cover.castShadow = true;
+  // The book is bound on the right. Its front cover carries the land on the inside: closed, it lies face down on the pile;
+  // opened, it lies on the right with the land facing up. `front` turns about the spine, which stands half a pile high.
+  const boardGeo = new THREE.BoxGeometry(W + 0.12, 0.04, H + 0.24);
+  const cover = new THREE.Mesh(boardGeo, coverMat);
+  cover.position.set(-(W + 0.12) / 2, -0.04, 0); cover.receiveShadow = true; cover.castShadow = true;
+  const SPINE = (N * T) / 2 + 0.006;
+  const front = new THREE.Group(); front.position.y = SPINE;
+  const inner = new THREE.Group(); inner.position.y = -SPINE; front.add(inner);
+  const frontBoard = new THREE.Mesh(boardGeo, coverMat);
+  frontBoard.position.set((W + 0.12) / 2, -0.04, 0); frontBoard.receiveShadow = true; frontBoard.castShadow = true;
+  inner.add(frontBoard, titleSlip());
   // the land's heights are printed on the base pages in neutral greys: the lower the land, the darker
   const mirrored = new THREE.Texture(); mirrored.wrapS = THREE.RepeatWrapping; mirrored.repeat.x = -1; mirrored.offset.x = 1; mirrored.colorSpace = THREE.SRGBColorSpace; mirrored.anisotropy = 8;
   const heights = new THREE.TextureLoader().load(data.id + '.png', (t) => { mirrored.image = t.image; mirrored.needsUpdate = true; }); heights.colorSpace = THREE.SRGBColorSpace; heights.anisotropy = 8;
@@ -273,7 +283,7 @@ function start(data) {
   backing.position.set(-W / 2, -0.01, 0); backing.receiveShadow = true;
   const base = new THREE.Mesh(new THREE.BoxGeometry(W, 0.02, H), landMat);
   base.position.set(W / 2, -0.01, 0); base.receiveShadow = true;
-  book.add(cover, backing, base);
+  inner.add(base); book.add(cover, backing, front);
 
   // Hinge (bound edge) along z at x = 0. Unread pile on x in [-W, 0]; turned sheets land on [0, W].
   // Each page is a sheet of blue paper, the water at one level, cut away where land still stands above it.
@@ -336,7 +346,7 @@ function start(data) {
     stencilWrite: true, stencilFunc: THREE.AlwaysStencilFunc, stencilRef: 1, stencilZPass: THREE.ReplaceStencilOp });
   seaMat.color = seaColor;
   const seaGeo = new THREE.ShapeGeometry(pageShapes(landPolys[0]), 1); seaGeo.rotateX(-Math.PI / 2);
-  for (const sx of [1, -1]) { const m = new THREE.Mesh(seaGeo, seaMat); m.scale.x = sx; m.position.y = 0.004; m.renderOrder = 1; book.add(m); }
+  for (const sx of [1, -1]) { const m = new THREE.Mesh(seaGeo, seaMat); m.scale.x = sx; m.position.y = 0.004; m.renderOrder = 1; (sx < 0 ? inner : book).add(m); }   // the mirrored copy is the right-hand page
   const filmGeo = new THREE.PlaneGeometry(W, H, 64, 1);
   filmGeo.rotateX(-Math.PI / 2); filmGeo.translate(-W / 2, 0.5, 0);       // mid-thickness, inside the dyed parts
   const filmMat = new THREE.MeshStandardMaterial({ color: 0xf8f8f4, map: washiTexture(), transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide, roughness: 1 });
@@ -355,9 +365,26 @@ function start(data) {
     const mark = levelMark(labelOf(levels[i].level), u);
     pivot.add(lid, mesh, film, mark);
     book.add(pivot);
-    return { pivot, u, mesh, lid, cover, film, mark, dye, p: i === 0 ? 1 : 0, held: false };
+    return { pivot, u, mesh, lid, cover, film, mark, dye, p: i === 0 && !playIntro ? 1 : 0, held: false };
   });
 
+  function titleSlip() {                   // a paper slip on the outside of the front cover, read top to bottom
+    const c = document.createElement('canvas'); c.width = 220; c.height = 760;
+    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+    const draw = () => {
+      const g = c.getContext('2d'); g.fillStyle = '#f7f7f3'; g.fillRect(0, 0, 220, 760);
+      g.strokeStyle = 'rgba(35,35,31,0.35)'; g.lineWidth = 2; g.strokeRect(9, 9, 202, 742);
+      g.fillStyle = '#23231f'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.font = '300 96px "Noto Sans JP", "Hiragino Sans", sans-serif';
+      [...'水位をめくる'].forEach((ch, k) => g.fillText(ch, 110, 100 + k * 112));
+      tex.needsUpdate = true;
+    };
+    draw(); document.fonts?.ready.then(draw);
+    const geo = new THREE.PlaneGeometry(1.1, 3.8);
+    geo.rotateX(Math.PI / 2); geo.rotateY(Math.PI);
+    geo.translate(W - 1.25, -0.0605, -H / 2 + 2.7);
+    return new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, roughness: 1 }));
+  }
   function levelMark(text, u) {            // printed on the underside, so it reads upright once the sheet is turned
     const c = document.createElement('canvas'); c.width = 512; c.height = 96;
     const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
@@ -598,11 +625,32 @@ function start(data) {
   }
 
   applyLook();
-  setTurned(1);
+  // ---------- opening, on the first load only: the closed book, the cover opening, then today's sheet turning ----------
+  let intro = playIntro ? 0 : -1;         // seconds played; -1 once it is over
+  function endIntro() {
+    if (intro < 0) return;
+    intro = -1; front.rotation.z = 0; $('places').style.opacity = ''; resize();
+    if (leaves[0].p === 0 && turned === 0) { leaves[0].p = 1; applyLeaf(leaves[0], 0); }
+    if (turned === 0) setTurned(1);
+  }
+  if (playIntro) {
+    turned = 0; leaves.forEach(applyLeaf);
+    front.rotation.z = Math.PI; $('places').style.opacity = 0; resize();
+    for (const type of ['pointerdown', 'keydown', 'wheel']) on(window, type, endIntro);
+    $('lvl').textContent = '現状'; $('lvlSub').textContent = 'いまの海岸線。青は海と川だけ'; $('older').disabled = true;
+  } else setTurned(1);
   const clock = new THREE.Clock();
   (function frame() {
     if (dead) return;
     const dt = Math.min(clock.getDelta(), 0.05);
+    if (intro >= 0) {
+      intro += dt;
+      const e = ease(Math.min(1, Math.max(0, (intro - 0.6) / 1.4)));
+      front.rotation.z = Math.PI * (1 - e);
+      if (!view.wide) { const dx = THREE.MathUtils.lerp(-W / 2, W / 2, e) - controls.target.x; controls.target.x += dx; camera.position.x += dx; }
+      if (intro >= 2.0 && turned === 0) { front.rotation.z = 0; $('places').style.opacity = ''; setTurned(1); }
+      if (intro >= 3.0) endIntro();
+    }
     stepLeaves(dt); showMarks();
     if (!orbiting) {
       const off = camera.position.clone().sub(controls.target);
