@@ -34,6 +34,12 @@ body {
 .top { position: fixed; left: 20px; top: 16px; max-width: calc(100% - 240px); pointer-events: none; }
 h1 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 20px; line-height: 1.35; letter-spacing: 0.04em; }
 .tag { margin: 2px 0 0; color: var(--ink-soft); font-size: 12px; }
+.regions { margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 2px 18px; pointer-events: auto; }
+.regions button { appearance: none; background: none; border: 0; border-bottom: 1px solid transparent; padding: 2px 0; font: inherit; font-size: 13px; color: var(--ink-soft); cursor: pointer; }
+.regions button b { font-family: var(--font-display); font-size: 16px; font-weight: 700; letter-spacing: 0.06em; margin-right: 6px; }
+.regions button:hover { color: var(--ink); }
+.regions button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--ink-soft); cursor: default; }
+.regions button:focus-visible { outline: 2px solid var(--ink-soft); outline-offset: 3px; }
 .lede { margin: 8px 0 0; font-size: 13px; }
 .lede span { white-space: nowrap; }   /* break only between sentences, and only when the window is narrow */
 
@@ -105,7 +111,7 @@ button:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visibl
 @media (max-width: 640px) {
   .top { left: 14px; top: 10px; max-width: calc(100% - 28px); }
   .lede { display: none; }
-  .tools { top: 62px; right: 14px; left: 14px; flex-direction: row; flex-wrap: wrap; align-items: flex-start; }
+  .tools { top: 100px; right: 14px; left: 14px; flex-direction: row; flex-wrap: wrap; align-items: flex-start; }
   .tools > button { padding: 4px 10px; }
   .tools summary { padding: 4px 10px; }
   .tools details[open] { max-height: 46vh; }
@@ -121,7 +127,8 @@ button:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visibl
 
 <header class="top">
   <h1>水位をめくる</h1>
-  <p class="tag">習作 v0.12 ・ 徳島（吉野川の河口） ・ 標高5mメッシュ</p>
+  <p class="tag">習作 v0.13 ・ 標高5mメッシュ</p>
+  <p class="regions" id="regions" role="group" aria-label="場所"></p>
   <p class="lede"><span>藍で染めたところが水、白く残っているのが土地です。</span><span>紙を右へめくるたびに海面が0.25m上がり、藍が重なって濃くなります。</span></p>
 </header>
 
@@ -147,11 +154,11 @@ button:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visibl
     <summary>この習作について</summary>
     <div class="body">
       <dl>
-        <div><dt>読み方</dt><dd>右のいちばん下の台紙が土地です。左の束は青い水の紙で、現状、海面+0.25m、+0.5m…+2mの順に右へめくります。紙は薄く透ける和紙で、水が届くところだけを藍で染めています。染めは重なるほど濃くなるので、右のページでは、早くから水に浸かっている場所ほど濃い藍になります。左の未読の束は、紙がふんわり重なっているので白く曇って見えます。めくって右に置くと、紙が密着して澄みます。左の束は裏返す前なので、次の紙が左右反転して見えます。</dd></div>
+        <div><dt>読み方</dt><dd>右のいちばん下の台紙が土地です。左の束は青い水の紙で、現状、海面+0.25m、+0.5m…と0.25mずつ上げながら右へめくります。<span id="rangeNote"></span>紙は薄く透ける和紙で、水が届くところだけを藍で染めています。染めは重なるほど濃くなるので、右のページでは、早くから水に浸かっている場所ほど濃い藍になります。左の未読の束は、紙がふんわり重なっているので白く曇って見えます。めくって右に置くと、紙が密着して澄みます。左の束は裏返す前なので、次の紙が左右反転して見えます。</dd></div>
         <div><dt>操作</dt><dd>紙を右へドラッグ（スワイプ）するとめくれ、左へで戻ります。下の目盛りと左右の矢印キーでも動きます。「真上から見る」で、真上からの視点に切り替わります。視点は、マウスの右ドラッグか2本指でも回せます。ホイールやピンチで拡大します。</dd></div>
         <div><dt>注意</dt><dd>その高さの水が、海や川から地続きで届く土地だけを水にしています。堤防の高さは標高データに含まれる範囲で反映していますが、水門は閉まらない前提で、薄い防潮壁は拾えていない可能性があります。決壊や排水は扱っていません。将来の予測ではありません。</dd></div>
-        <div><dt>標高</dt><dd>国土地理院 <a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>（標高タイル・基盤地図情報数値標高モデル 5mメッシュ）を加工。高さの基準は東京湾平均海面。約16mの格子に平均して簡略化しています。山側の測量の欠けは、周りの高さで埋めています。</dd></div>
-        <div><dt>地名</dt><dd>右のページに、代表的な地名を載せています。位置は国土地理院の<a href="https://msearch.gsi.go.jp/address-search/AddressSearch?q=%E5%BE%B3%E5%B3%B6%E9%A7%85">地名検索</a>で調べた代表点です。徳島空港は徳島飛行場の位置です。</dd></div>
+        <div><dt>標高</dt><dd>国土地理院 <a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>（標高タイル・基盤地図情報数値標高モデル 5mメッシュ）を加工。高さの基準は東京湾平均海面。約16mの格子に平均して簡略化しています。<span id="dataNote"></span></dd></div>
+        <div><dt>地名</dt><dd>右のページに、代表的な地名を載せています。位置は国土地理院の<a href="https://msearch.gsi.go.jp/address-search/AddressSearch?q=%E5%BE%B3%E5%B3%B6%E9%A7%85">地名検索</a>で調べた代表点です。<span id="placeNote"></span></dd></div>
         <div><dt>着想</dt><dd>Caroline Rose の水深の本（<a href="https://hackaday.com/2013/10/03/making-a-bathymetric-book-by-hand-and-searching-for-an-easier-way">Hackaday 2013年の紹介</a>）、Gordon Tu「<a href="https://gordontu.com/maps/paper-china/live/?lang=en">Paper China</a>」</dd></div>
       </dl>
     </div>
@@ -185,19 +192,40 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const $ = (id) => document.getElementById(id);
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-try {
-  start(await (await fetch('sheets.json')).json());
-} catch (err) {
-  console.error(err);
-  $('fail').style.display = 'grid';
+const REGIONS = [['tokushima', '徳島', '吉野川の河口'], ['sendai', '仙台', '名取川の河口と仙台空港']];
+const cache = {};
+let stop = null, current = null;
+$('regions').innerHTML = REGIONS.map(([id, name, sub]) => `<button type="button" data-id="${id}" aria-pressed="false"><b>${name}</b>${sub}</button>`).join('');
+async function show(id) {
+  if (id === current) return;
+  current = id;
+  for (const b of $('regions').children) b.setAttribute('aria-pressed', String(b.dataset.id === id));
+  try {
+    const data = cache[id] ??= await (await fetch(id + '.json')).json();
+    if (current !== id) return;                 // another place was chosen while this one loaded
+    if (stop) stop();
+    stop = start(data);
+    try { history.replaceState(null, '', '#' + id); } catch (e) { /* the address is optional */ }
+  } catch (err) {
+    console.error(err);
+    $('fail').style.display = 'grid';
+  }
 }
+$('regions').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) show(b.dataset.id); });
+const asked = location.hash.slice(1);
+show(REGIONS.some(([id]) => id === asked) ? asked : 'tokushima');
 
 function start(data) {
   const { W, H, levels, land: landPolys, land_km2, margin } = data;
+  const ac = new AbortController(), signal = ac.signal;
+  const on = (target, type, fn) => target.addEventListener(type, fn, { signal });
+  let dead = false;
+  $('dataNote').textContent = data.note; $('rangeNote').textContent = data.range; $('placeNote').textContent = data.placeNote;
+  $('viewBtn').textContent = '真上から見る';
   const N = landPolys.length;
   let T = 0.02;                     // sheet thickness
   let SOFT = 1.2;                   // how far a turning sheet bows, in radians
-  const canvas = $('stage');
+  const canvas = $('stage').cloneNode(false); $('stage').replaceWith(canvas);   // a fresh canvas for each place
   const labelOf = (L) => (L === null ? '現状' : `海面 +${L.toFixed(2)} m`);
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -416,13 +444,13 @@ function start(data) {
     if (d.dir > 0 && leaf.p > 0.3) setTurned(turned + 1);
     else if (d.dir < 0 && leaf.p < 0.7) setTurned(turned - 1);
   }
-  canvas.addEventListener('pointerdown', (e) => {
+  on(canvas, 'pointerdown', (e) => {
     if (e.pointerType === 'touch') { touches.add(e.pointerId); if (touches.size > 1) { releaseDrag(false); return; } }
     else if (e.button !== 0) return;
     drag = { id: e.pointerId, x: e.clientX, dir: 0, leaf: -1 };
     try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* capture is optional */ }
   });
-  canvas.addEventListener('pointermove', (e) => {
+  on(canvas, 'pointermove', (e) => {
     if (!drag || e.pointerId !== drag.id) return;
     const dx = e.clientX - drag.x;
     if (!drag.dir) {
@@ -439,8 +467,8 @@ function start(data) {
     applyLeaf(leaf, drag.leaf);
   });
   const endPointer = (e) => { touches.delete(e.pointerId); if (drag && e.pointerId === drag.id) releaseDrag(e.type === 'pointerup'); };
-  canvas.addEventListener('pointerup', endPointer);
-  canvas.addEventListener('pointercancel', endPointer);
+  on(canvas, 'pointerup', endPointer);
+  on(canvas, 'pointercancel', endPointer);
 
   // ---------- framing ----------
   const view = { fy: 1, wide: true };
@@ -454,7 +482,7 @@ function start(data) {
     return Math.max((H * (viewTop ? 1.0 * 0.55 : 0.81 * 0.6)) / (tan * view.fy), (width / 2 * 1.12) / (tan * camera.aspect));
   }
   controls.addEventListener('start', () => { orbiting = true; viewAnim = false; });
-  $('viewBtn').addEventListener('click', () => {
+  on($('viewBtn'), 'click', () => {
     viewTop = !viewTop; viewAnim = true; userZoom = 1;
     $('viewBtn').textContent = viewTop ? '斜めから見る' : '真上から見る';
   });
@@ -474,7 +502,7 @@ function start(data) {
     camera.updateProjectionMatrix();
   }
   camera.position.copy(viewDir).multiplyScalar(40);
-  addEventListener('resize', resize);
+  on(window, 'resize', resize);
   resize();
   camera.position.copy(controls.target).addScaledVector(viewDir, fitDistance());
 
@@ -502,9 +530,9 @@ function start(data) {
     const saved = JSON.parse(localStorage.getItem('suii-look-10') || 'null');
     if (saved) for (const k of LOOK) if (Number.isFinite(saved[k])) $(k).value = saved[k];
   } catch (e) { /* storage is optional */ }
-  for (const k of LOOK) $(k).addEventListener('input', applyLook);
-  $('reset').addEventListener('click', () => { for (const k of LOOK) $(k).value = DEFAULTS[k]; applyLook(); });
-  $('copy').addEventListener('click', async () => {
+  for (const k of LOOK) on($(k), 'input', applyLook);
+  on($('reset'), 'click', () => { for (const k of LOOK) $(k).value = DEFAULTS[k]; applyLook(); });
+  on($('copy'), 'click', async () => {
     try { await navigator.clipboard.writeText($('vals').textContent); $('copy').textContent = 'コピーしました'; }
     catch (e) { $('copy').textContent = '下の文字列を選んでコピー'; }
     setTimeout(() => ($('copy').textContent = '設定をコピー'), 1800);
@@ -514,7 +542,7 @@ function start(data) {
   $('page').max = N;
   $('ticks').innerHTML = levels.map((lv, i) => {
     const x = (i / (N - 1)) * 100;
-    const label = lv.level === null ? '現状' : (Number.isInteger(lv.level * 2) ? `+${lv.level.toFixed(1)}m` : '');
+    const label = lv.level === null ? '現状' : (i === N - 1 ? `+${+lv.level.toFixed(2)}m` : (Number.isInteger(lv.level * 2) && (i < N - 2 || Number.isInteger(levels[N - 1].level * 2)) ? `+${lv.level.toFixed(1)}m` : ''));
     return `<i style="left:${x}%"></i>` + (label ? `<span style="left:${x}%">${label}</span>` : '');
   }).join('');
   function setTurned(k) {
@@ -528,16 +556,16 @@ function start(data) {
     $('older').disabled = turned === 1;
     $('newer').disabled = turned === N;
   }
-  $('page').addEventListener('input', (e) => setTurned(+e.target.value));
-  $('older').addEventListener('click', () => setTurned(turned - 1));
-  $('newer').addEventListener('click', () => setTurned(turned + 1));
-  addEventListener('keydown', (e) => {
+  on($('page'), 'input', (e) => setTurned(+e.target.value));
+  on($('older'), 'click', () => setTurned(turned - 1));
+  on($('newer'), 'click', () => setTurned(turned + 1));
+  on(window, 'keydown', (e) => {
     if (e.target instanceof HTMLInputElement) return;
     if (e.key === 'ArrowRight') setTurned(turned + 1);
     if (e.key === 'ArrowLeft') setTurned(turned - 1);
   });
 
-  const PLACES = [["吉野川", 1.047, -0.539, "w"], ["眉山", -3.199, -3.259, ""], ["徳島駅", -0.634, -2.105, ""], ["徳島県庁", -0.09, -2.831, ""], ["徳島空港", 3.272, 3.075, ""], ["沖洲", 2.801, -3.041, ""], ["津田", 1.576, -4.02, ""], ["川内", 1.004, 0.695, ""], ["応神", -2.177, 1.395, ""], ["北島町", -0.982, 2.401, ""], ["松茂町", 1.453, 3.119, ""]];                    // [name, u, v, kind] in page coordinates; kind 'w' is a river
+  const PLACES = data.places;                    // [name, u, v, kind] in page coordinates; kind 'w' is a river
   const placeEls = PLACES.map(([name, , , kind]) => {
     const el = document.createElement('span'); el.className = 'place' + (kind ? ' ' + kind : ''); el.textContent = name;
     $('places').appendChild(el); return el;
@@ -557,6 +585,7 @@ function start(data) {
   setTurned(1);
   const clock = new THREE.Clock();
   (function frame() {
+    if (dead) return;
     const dt = Math.min(clock.getDelta(), 0.05);
     stepLeaves(dt); showMarks();
     if (!orbiting) {
@@ -576,7 +605,13 @@ function start(data) {
     requestAnimationFrame(frame);
   })();
   window.__progress = () => leaves.map((l) => +l.p.toFixed(2));
-  window.__ready = true;
+  window.__ready = data.id;
+  return () => {
+    dead = true; ac.abort(); controls.dispose();
+    scene.traverse((o) => { o.geometry?.dispose(); for (const m of [].concat(o.material || [])) { m.map?.dispose(); m.dispose(); } });
+    renderer.dispose(); renderer.forceContextLoss();
+    $('places').replaceChildren();
+  };
 }
 </script>
 </body>
