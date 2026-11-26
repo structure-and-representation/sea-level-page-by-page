@@ -99,6 +99,11 @@ button:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visibl
 .ticks span { position: absolute; top: 8px; transform: translateX(-50%); font-size: 11px; color: var(--ink-soft); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .hint { margin: 2px 0 0; font-size: 11px; color: var(--ink-soft); text-align: center; }
 .tools > button { background: color-mix(in srgb, var(--desk-deep) 90%, transparent); color: var(--ink-soft); font-size: 12px; padding: 6px 12px; border-radius: 4px; }
+/* zoomed in, the book runs under the title and the scale: the desk colour fades in over it there, so the words stay readable */
+.veil { position: fixed; left: 0; right: 0; pointer-events: none; opacity: 0; transition: opacity 0.3s; }
+#veilTop { top: 0; height: calc(var(--top-h, 150px) + 36px); background: linear-gradient(to bottom, var(--desk) 0, var(--desk) calc(100% - 44px), transparent 100%); }
+#veilBottom { bottom: 0; height: calc(var(--bottom-h, 150px) + 36px); background: linear-gradient(to top, var(--desk) 0, var(--desk) calc(100% - 44px), transparent 100%); }
+body.free .veil { opacity: 0.94; }
 #places { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
 .place {
   position: absolute; left: 0; top: 0; white-space: nowrap; will-change: transform;
@@ -127,15 +132,19 @@ button:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visibl
 
 <div id="places" aria-hidden="true"></div>
 
+<div class="veil" id="veilTop" aria-hidden="true"></div>
+<div class="veil" id="veilBottom" aria-hidden="true"></div>
+
 <header class="top">
   <h1>水位をめくる</h1>
-  <p class="tag">習作 v0.17 ・ 標高5mメッシュ</p>
+  <p class="tag">習作 v0.18 ・ 標高5mメッシュ</p>
   <p class="regions" id="regions" role="group" aria-label="場所"></p>
   <p class="lede"><span>青いところが水、灰色が土地で、低い土地ほど濃い灰色です。</span><span>紙を右へめくるたびに海面が0.25m上がり、青が重なって濃くなります。</span></p>
 </header>
 
 <nav class="tools" aria-label="設定と説明">
   <button id="viewBtn" type="button">真上から見る</button>
+  <button id="homeBtn" type="button" hidden>全体を見る</button>
   <details id="tune">
     <summary>見た目の調整</summary>
     <div class="body">
@@ -157,7 +166,7 @@ button:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visibl
     <div class="body">
       <dl>
         <div><dt>読み方</dt><dd>右のいちばん下の台紙が土地です。左の束は青い水の紙で、現状、海面+0.25m、+0.5m…と0.25mずつ上げながら右へめくります。<span id="rangeNote"></span>紙は薄く透ける和紙で、水が届くところだけを青で染めています。染めは重なるほど濃くなるので、右のページでは、早くから水に浸かっている場所ほど濃い青になります。左の未読の束は、紙がふんわり重なっているので白く曇って見えます。めくって右に置くと、紙が密着して澄みます。左の束は裏返す前なので、次の紙が左右反転して見えます。</dd></div>
-        <div><dt>操作</dt><dd>開いたときと場所を替えたときに、表紙が開いて「現状」の紙がめくれます。場所を替えると、本が机から下げられ、次の本が置かれます。クリックやキーで飛ばせます。紙を右へドラッグ（スワイプ）するとめくれ、左へで戻ります。下の目盛りと左右の矢印キーでも動きます。「真上から見る」で、真上からの視点に切り替わります。視点は、マウスの右ドラッグか2本指でも回せます。ホイールやピンチで拡大します。</dd></div>
+        <div><dt>操作</dt><dd>開いたときと場所を替えたときに、表紙が開いて「現状」の紙がめくれます。場所を替えると、本が机から下げられ、次の本が置かれます。クリックやキーで飛ばせます。紙を右へドラッグ（スワイプ）するとめくれ、左へで戻ります。下の目盛りと左右の矢印キーでも動きます。「真上から見る」で、真上からの視点に切り替わります。ホイールやピンチで、ポインタや指の位置に寄ります。寄ったあとは、マウスの右ドラッグか2本指のドラッグで見る位置を動かせます。「全体を見る」で元に戻ります。</dd></div>
         <div><dt>注意</dt><dd>その高さの水が、海や川から地続きで届く土地だけを水にしています。堤防の高さは標高データに含まれる範囲で反映していますが、水門は閉まらない前提で、薄い防潮壁は拾えていない可能性があります。決壊や排水は扱っていません。将来の予測ではありません。</dd></div>
         <div><dt>標高</dt><dd>国土地理院 <a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>（標高タイル・基盤地図情報数値標高モデル 5mメッシュ）を加工。高さの基準は東京湾平均海面。約16mの格子に平均して簡略化しています。台紙の灰色は標高を1m刻みで塗り分けたもので、0m以下がいちばん濃く、5mより上がいちばん淡い色です。<span id="dataNote"></span></dd></div>
         <div><dt>地名</dt><dd>右のページに、代表的な地名を載せています。位置は国土地理院の<a href="https://msearch.gsi.go.jp/address-search/AddressSearch?q=%E5%BE%B3%E5%B3%B6%E9%A7%85">地名検索</a>で調べた代表点です。<span id="placeNote"></span></dd></div>
@@ -250,12 +259,13 @@ function start(data, swapped) {
   const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 200);
   const controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true;
-  controls.enablePan = false;
+  controls.enablePan = true; controls.enableRotate = false; controls.screenSpacePanning = false;
+  controls.zoomToCursor = true;       // zooming closes in on the place under the pointer or between the two fingers
   controls.maxPolarAngle = Math.PI * 0.47;
   controls.minDistance = 4; controls.maxDistance = 90;
   // a plain drag belongs to the page; the view turns with the right button or two fingers
-  controls.mouseButtons = { LEFT: -1, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
-  controls.touches = { ONE: -1, TWO: THREE.TOUCH.DOLLY_ROTATE };
+  controls.mouseButtons = { LEFT: -1, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
+  controls.touches = { ONE: -1, TWO: THREE.TOUCH.DOLLY_PAN };
 
   const hemi = new THREE.HemisphereLight(0xffffff, 0x9a958c, 1.2);
   const sun = new THREE.DirectionalLight(0xfffaf2, 3.2);
@@ -531,29 +541,36 @@ function start(data, swapped) {
   const OBLIQUE = new THREE.Vector3(0, 0.86, 0.62).normalize(), TOP = new THREE.Vector3(0, 1, 0.03).normalize();
   const viewDir = OBLIQUE;
   let viewTop = false, viewAnim = false;
-  let userZoom = 1, orbiting = false;
+  let free = false, orbiting = false;      // free: the reader has zoomed or moved the view; otherwise the whole book is framed
+  const home = new THREE.Vector3();
   function fitDistance() {
     const tan = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
     const width = view.wide ? 2 * W * 1.1 : W * 1.16;
     return Math.max((H * (viewTop ? 1.0 * 0.55 : 0.81 * 0.6)) / (tan * view.fy), (width / 2 * 1.12) / (tan * camera.aspect));
   }
-  controls.addEventListener('start', () => { orbiting = true; viewAnim = false; });
+  controls.addEventListener('start', () => { orbiting = true; viewAnim = false; if (intro < 0) free = true; });
+  on($('homeBtn'), 'click', () => { free = false; });
   on($('viewBtn'), 'click', () => {
-    viewTop = !viewTop; viewAnim = true; userZoom = 1;
+    viewTop = !viewTop; viewAnim = true;
     $('viewBtn').textContent = viewTop ? '斜めから見る' : '真上から見る';
   });
-  controls.addEventListener('end', () => { orbiting = false; userZoom = camera.position.distanceTo(controls.target) / fitDistance(); });
+  controls.addEventListener('end', () => { orbiting = false; });
   function resize() {
     const w = canvas.clientWidth, h = canvas.clientHeight;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     const top = document.querySelector('.top').getBoundingClientRect().bottom + 8;
     const bottom = h - document.querySelector('.bar').getBoundingClientRect().top + 8;
+    document.body.style.setProperty('--top-h', top + 'px'); document.body.style.setProperty('--bottom-h', bottom + 'px');
     view.fy = Math.max(0.3, (h - top - bottom) / h);
     view.wide = w / (h * view.fy) > 1.35;                // room for both piles; otherwise frame the turned pile
-    const off = camera.position.clone().sub(controls.target);
-    controls.target.set(view.wide ? 0 : W / 2, 0.1, 0);
-    camera.position.copy(controls.target).add(off);
+    home.set(view.wide ? 0 : W / 2, 0.1, 0);
+    if (!free) {
+      const off = camera.position.clone().sub(controls.target);
+      controls.target.copy(home);
+      camera.position.copy(controls.target).add(off);
+    }
+    controls.maxDistance = fitDistance() * 1.3;
     camera.setViewOffset(w, h, 0, (bottom - top) / 2, w, h);
     camera.updateProjectionMatrix();
   }
@@ -681,10 +698,18 @@ function start(data, swapped) {
         if (off.distanceTo(want) < 0.002) { off.copy(want); viewAnim = false; }
         off.multiplyScalar(len);
       }
-      off.setLength(THREE.MathUtils.lerp(off.length(), fitDistance() * userZoom, reduceMotion ? 1 : 0.12));
+      if (!free) {                           // back to the whole book
+        off.setLength(THREE.MathUtils.lerp(off.length(), fitDistance(), reduceMotion ? 1 : 0.12));
+        if (intro < 0) controls.target.lerp(home, reduceMotion ? 1 : 0.14);
+      }
       camera.position.copy(controls.target).add(off);
     }
     controls.update();
+    if (free) {                              // the view may wander over the book, not off it
+      const cx = THREE.MathUtils.clamp(controls.target.x, -W, W) - controls.target.x, cz = THREE.MathUtils.clamp(controls.target.z, -H / 2, H / 2) - controls.target.z;
+      if (cx || cz) { controls.target.x += cx; controls.target.z += cz; camera.position.x += cx; camera.position.z += cz; }
+    }
+    if ($('homeBtn').hidden === free) { $('homeBtn').hidden = !free; document.body.classList.toggle('free', free); }
     renderer.render(scene, camera);
     placeLabels();
     requestAnimationFrame(frame);
