@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>水位をめくる</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* layout: full-bleed book on a dark desk; title top-left, two small drawers top-right, one water-level bar at the bottom.
+     Blue is reserved for water: the pages and the level marker. Nothing else is blue. */
+  --desk: #23211e;
+  --desk-deep: #171614;
+  --paper: #f3efe6;
+  --ink: #ece8df;
+  --ink-soft: #a8a297;
+  --line: rgba(236, 232, 223, 0.2);
+  --water: #7fa5d6;
+  --font-display: "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --font-body: "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--desk); color: var(--ink);
+  font-family: var(--font-body); font-size: 14px; line-height: 1.7;
+  overflow: hidden;
+}
+#stage { position: fixed; inset: 0; display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+#stage.turning { cursor: grabbing; }
+
+.top { position: fixed; left: 20px; top: 16px; max-width: min(430px, calc(100% - 40px)); pointer-events: none; }
+h1 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 20px; line-height: 1.35; letter-spacing: 0.04em; }
+.tag { margin: 2px 0 0; color: var(--ink-soft); font-size: 12px; }
+.lede { margin: 8px 0 0; font-size: 13px; }
+
+.tools { position: fixed; right: 16px; top: 14px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.tools details {
+  width: max-content; max-width: min(330px, calc(100vw - 32px));
+  background: color-mix(in srgb, var(--desk-deep) 90%, transparent);
+  border: 1px solid var(--line); border-radius: 4px; font-size: 12px;
+}
+.tools details[open] { width: min(330px, calc(100vw - 32px)); max-height: 60vh; overflow-y: auto; }
+.tools summary { cursor: pointer; color: var(--ink-soft); padding: 6px 12px; }
+.tools .body { padding: 2px 14px 14px; display: flex; flex-direction: column; gap: 8px; }
+.row { display: flex; align-items: center; gap: 8px; }
+.row label { flex: none; width: 5.5em; color: var(--ink-soft); }
+.row input[type="range"] { flex: 1; min-width: 0; accent-color: var(--ink-soft); }
+.row output { flex: none; width: 2.6em; text-align: right; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.tools code { display: block; font-size: 11px; color: var(--ink-soft); overflow-wrap: anywhere; line-height: 1.5; }
+.tools dl { margin: 0; display: grid; gap: 8px; }
+.tools dt { color: var(--ink-soft); }
+.tools dd { margin: 0; }
+a { color: var(--ink); }
+button {
+  font: inherit; font-size: 13px; color: var(--ink);
+  padding: 6px 10px; background: transparent;
+  border: 1px solid var(--line); border-radius: 3px; cursor: pointer;
+}
+.row button { flex: 1; }
+button:hover:not(:disabled) { border-color: var(--ink-soft); }
+button:disabled { opacity: 0.3; cursor: default; }
+button:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+.bar {
+  position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%);
+  width: min(680px, calc(100% - 24px));
+  padding: 12px 18px 10px;   /* no panel: the scale lies straight on the table */
+}
+.level { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.level b {
+  white-space: nowrap; font-family: var(--font-display); font-weight: 700; font-size: 28px; line-height: 1.15;
+  font-variant-numeric: tabular-nums; color: var(--paper);
+}
+.level span { color: var(--ink-soft); font-size: 12px; }
+.scale { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.scale button { flex: none; width: 34px; padding: 3px 0; font-size: 22px; line-height: 1; border: none; color: var(--ink-soft); }
+.scale button:hover:not(:disabled) { color: var(--paper); }
+.track { flex: 1; min-width: 0; }
+/* one point on a fixed scale: the rail is the same on both sides of the marker */
+#page { -webkit-appearance: none; appearance: none; display: block; width: 100%; height: 22px; margin: 0; background: transparent; cursor: pointer; }
+#page::-webkit-slider-runnable-track { height: 2px; background: var(--ink-soft); border-radius: 0; }
+#page::-moz-range-track { height: 2px; background: var(--ink-soft); }
+#page::-moz-range-progress { background: transparent; }
+#page::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; margin-top: -7px; border-radius: 50%; background: var(--water); border: 2px solid var(--paper); }
+#page::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--water); border: 2px solid var(--paper); }
+.ticks { position: relative; height: 26px; margin: 0 8px; }
+.ticks i { position: absolute; top: 0; width: 1px; height: 6px; background: var(--ink-soft); }
+.ticks span { position: absolute; top: 8px; transform: translateX(-50%); font-size: 11px; color: var(--ink-soft); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.hint { margin: 2px 0 0; font-size: 11px; color: var(--ink-soft); text-align: center; }
+.tools > button { background: color-mix(in srgb, var(--desk-deep) 90%, transparent); color: var(--ink-soft); font-size: 12px; padding: 6px 12px; border-radius: 4px; }
+#places { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+.place {
+  position: absolute; left: 0; top: 0; white-space: nowrap; will-change: transform;
+  font-size: 12px; line-height: 1; color: #26221d; letter-spacing: 0.04em;
+  text-shadow: 0 0 2px #f3efe6, 0 0 2px #f3efe6, 0 0 4px #f3efe6, 0 0 6px #f3efe6;
+}
+.place::before { content: ""; position: absolute; left: -9px; top: 4px; width: 4px; height: 4px; border-radius: 50%; background: #26221d; box-shadow: 0 0 0 1.5px #f3efe6; }
+.place.w { font-family: var(--font-display); font-size: 14px; letter-spacing: 0.5em; color: #f6f2e9; text-shadow: 0 0 2px #14244f, 0 0 4px #14244f, 0 0 6px #14244f; }
+.place.w::before { display: none; }
+.fail { position: fixed; inset: 0; display: none; place-items: center; padding: 24px; text-align: center; }
+@media (max-width: 640px) {
+  .top { left: 14px; top: 10px; max-width: calc(100% - 28px); }
+  .lede { display: none; }
+  .tools { top: 62px; right: 14px; left: 14px; flex-direction: row; flex-wrap: wrap; align-items: flex-start; }
+  .tools > button { padding: 4px 10px; }
+  .tools summary { padding: 4px 10px; }
+  .tools details[open] { max-height: 46vh; }
+  .bar { padding: 10px 12px 8px; bottom: 10px; }
+  .level b { font-size: 24px; }
+}
+</style>
+</head>
+<body>
+<canvas id="stage" aria-label="薄く透ける紙を1丁ずつ右へめくり重ねる本。藍で染めたところが水で、染めていないところから土地が透けて見える"></canvas>
+
+<div id="places" aria-hidden="true"></div>
+
+<header class="top">
+  <h1>水位をめくる</h1>
+  <p class="tag">習作 v0.12 ・ 徳島（吉野川の河口） ・ 標高5mメッシュ</p>
+  <p class="lede">藍で染めたところが水、白く残っているのが土地です。紙を右へめくるたびに海面が0.25m上がり、藍が重なって濃くなります。</p>
+</header>
+
+<nav class="tools" aria-label="設定と説明">
+  <button id="viewBtn" type="button">真上から見る</button>
+  <details id="tune">
+    <summary>見た目の調整</summary>
+    <div class="body">
+      <div class="row"><label for="soft">紙の柔らかさ</label><input id="soft" type="range" min="0" max="20" value="12"><output for="soft"></output></div>
+      <div class="row"><label for="dye">染めの濃さ</label><input id="dye" type="range" min="8" max="45" value="26"><output for="dye"></output></div>
+      <div class="row"><label for="sheer">紙の濃さ</label><input id="sheer" type="range" min="0" max="50" value="14"><output for="sheer"></output></div>
+      <div class="row"><label for="haze">未読の曇り</label><input id="haze" type="range" min="0" max="85" value="70"><output for="haze"></output></div>
+      <div class="row"><label for="thick">紙の厚み</label><input id="thick" type="range" min="1" max="12" value="2"><output for="thick"></output></div>
+      <div class="row"><label for="bright">明るさ</label><input id="bright" type="range" min="60" max="140" value="100"><output for="bright"></output></div>
+      <div class="row"><label for="shade">影の濃さ</label><input id="shade" type="range" min="20" max="92" value="60"><output for="shade"></output></div>
+      <div class="row"><label for="light">光の向き</label><input id="light" type="range" min="0" max="360" value="128"><output for="light"></output></div>
+      <div class="row"><label for="elev">光の高さ</label><input id="elev" type="range" min="8" max="70" value="26"><output for="elev"></output></div>
+      <div class="row"><button id="copy" type="button">設定をコピー</button><button id="reset" type="button">初期値に戻す</button></div>
+      <code id="vals"></code>
+    </div>
+  </details>
+  <details id="about">
+    <summary>この習作について</summary>
+    <div class="body">
+      <dl>
+        <div><dt>読み方</dt><dd>右のいちばん下の台紙が土地です。左の束は青い水の紙で、現状、海面+0.25m、+0.5m…+2mの順に右へめくります。紙は薄く透ける和紙で、水が届くところだけを藍で染めています。染めは重なるほど濃くなるので、右のページでは、早くから水に浸かっている場所ほど濃い藍になります。左の未読の束は、紙がふんわり重なっているので白く曇って見えます。めくって右に置くと、紙が密着して澄みます。左の束は裏返す前なので、次の紙が左右反転して見えます。</dd></div>
+        <div><dt>操作</dt><dd>紙を右へドラッグ（スワイプ）するとめくれ、左へで戻ります。下の目盛りと左右の矢印キーでも動きます。「真上から見る」で、真上からの視点に切り替わります。視点は、マウスの右ドラッグか2本指でも回せます。ホイールやピンチで拡大します。</dd></div>
+        <div><dt>注意</dt><dd>その高さの水が、海や川から地続きで届く土地だけを水にしています。堤防の高さは標高データに含まれる範囲で反映していますが、水門は閉まらない前提で、薄い防潮壁は拾えていない可能性があります。決壊や排水は扱っていません。将来の予測ではありません。</dd></div>
+        <div><dt>標高</dt><dd>国土地理院 <a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>（標高タイル・基盤地図情報数値標高モデル 5mメッシュ）を加工。高さの基準は東京湾平均海面。約16mの格子に平均して簡略化しています。山側の測量の欠けは、周りの高さで埋めています。</dd></div>
+        <div><dt>地名</dt><dd>右のページに、代表的な地名を載せています。位置は国土地理院の<a href="https://msearch.gsi.go.jp/address-search/AddressSearch?q=%E5%BE%B3%E5%B3%B6%E9%A7%85">地名検索</a>で調べた代表点です。徳島空港は徳島飛行場の位置です。</dd></div>
+        <div><dt>着想</dt><dd>Caroline Rose の水深の本（<a href="https://hackaday.com/2013/10/03/making-a-bathymetric-book-by-hand-and-searching-for-an-easier-way">Hackaday 2013年の紹介</a>）、Gordon Tu「<a href="https://gordontu.com/maps/paper-china/live/?lang=en">Paper China</a>」</dd></div>
+      </dl>
+    </div>
+  </details>
+</nav>
+
+<section class="bar" aria-label="水位">
+  <div class="level"><b id="lvl">現状</b><span id="lvlSub"></span></div>
+  <div class="scale">
+    <button id="older" type="button" aria-label="1丁戻す（水位を下げる）">‹</button>
+    <div class="track">
+      <input id="page" type="range" min="1" max="9" step="1" value="1" aria-label="水位">
+      <div class="ticks" id="ticks" aria-hidden="true"></div>
+    </div>
+    <button id="newer" type="button" aria-label="1丁めくる（水位を上げる）">›</button>
+  </div>
+  <p class="hint">紙を右へドラッグするとめくれます。左へで戻ります。</p>
+</section>
+
+<div class="fail" id="fail">3D表示を開始できませんでした。WebGLが有効なブラウザで開き直してください。</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const $ = (id) => document.getElementById(id);
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+try {
+  start(await (await fetch('sheets.json')).json());
+} catch (err) {
+  console.error(err);
+  $('fail').style.display = 'grid';
+}
+
+function start(data) {
+  const { W, H, levels, land: landPolys, land_km2, margin } = data;
+  const N = landPolys.length;
+  let T = 0.02;                     // sheet thickness
+  let SOFT = 1.2;                   // how far a turning sheet bows, in radians
+  const canvas = $('stage');
+  const labelOf = (L) => (L === null ? '現状' : `海面 +${L.toFixed(2)} m`);
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x23211e);
+  const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 200);
+  const controls = new OrbitControls(camera, canvas);
+  controls.enableDamping = true;
+  controls.enablePan = false;
+  controls.maxPolarAngle = Math.PI * 0.47;
+  controls.minDistance = 4; controls.maxDistance = 90;
+  // a plain drag belongs to the page; the view turns with the right button or two fingers
+  controls.mouseButtons = { LEFT: -1, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
+  controls.touches = { ONE: -1, TWO: THREE.TOUCH.DOLLY_ROTATE };
+
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x9a958c, 1.2);
+  const sun = new THREE.DirectionalLight(0xfffaf2, 3.2);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(4096, 4096);
+  Object.assign(sun.shadow.camera, { left: -13, right: 13, top: 13, bottom: -13, near: 1, far: 80 });
+  sun.shadow.camera.updateProjectionMatrix();
+  sun.shadow.bias = -0.0002; sun.shadow.normalBias = 0.004;
+  scene.add(hemi, sun, sun.target);
+
+  const desk = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshStandardMaterial({ color: 0x2b2825, roughness: 1 }));
+  desk.rotation.x = -Math.PI / 2; desk.position.y = -0.07; desk.receiveShadow = true;
+  scene.add(desk);
+
+  const fibre = paperTexture();
+  const book = new THREE.Group(); scene.add(book);
+  // cover under both piles, the land's base page on the right, a plain backing on the left
+  const coverMat = new THREE.MeshStandardMaterial({ color: 0x3b332b, roughness: 0.95 });
+  const cover = new THREE.Mesh(new THREE.BoxGeometry(2 * W + 0.24, 0.04, H + 0.24), coverMat);
+  cover.position.y = -0.04; cover.receiveShadow = true; cover.castShadow = true;
+  const landMat = new THREE.MeshStandardMaterial({ color: 0xece4d2, roughness: 1, bumpMap: fibre, bumpScale: 0.6 });
+  const backing = new THREE.Mesh(new THREE.BoxGeometry(W, 0.02, H), landMat);
+  backing.position.set(-W / 2, -0.01, 0); backing.receiveShadow = true;
+  const base = new THREE.Mesh(new THREE.BoxGeometry(W, 0.02, H), landMat);
+  base.position.set(W / 2, -0.01, 0); base.receiveShadow = true;
+  book.add(cover, backing, base);
+
+  // Hinge (bound edge) along z at x = 0. Unread pile on x in [-W, 0]; turned sheets land on [0, W].
+  // Each page is a sheet of blue paper, the water at one level, cut away where land still stands above it.
+  // Pages are laid out mirrored so that they fit over the land once turned.
+  function extrude(shapes) {
+    const g = new THREE.ExtrudeGeometry(shapes, { depth: 1, bevelEnabled: false, curveSegments: 1 });
+    g.rotateX(-Math.PI / 2);
+    return g;
+  }
+  const flip = ([u, v]) => [-u - W / 2, v];
+  function path(ring, Ctor) {
+    const p = new Ctor();
+    ring.forEach((q, k) => { const [x, y] = flip(q); k ? p.lineTo(x, y) : p.moveTo(x, y); });
+    p.closePath();
+    return p;
+  }
+  function pageShapes(sheet) {
+    const page = path([[-W / 2, -H / 2], [W / 2, -H / 2], [W / 2, H / 2], [-W / 2, H / 2]], THREE.Shape);
+    for (const ring of sheet.holes) page.holes.push(path(ring, THREE.Path));
+    const shapes = [page];
+    for (const [outer, ...holes] of sheet.islands) {       // water enclosed by land, with any land inside it
+      const sh = path(outer, THREE.Shape);
+      for (const ring of holes) sh.holes.push(path(ring, THREE.Path));
+      shapes.push(sh);
+    }
+    return shapes;
+  }
+
+  // A turning sheet bows like thin paper: its angle grows with the distance from the bound edge.
+  // The vertex shader lays each point along that arc; uPhi0 is the angle at the hinge, uKappa the curvature.
+  const BEND_POS = `
+    float bendD = -position.x;
+    float bendA = uPhi0 + uKappa * bendD;
+    vec2 bendP = abs(uKappa) < 1e-5
+      ? vec2(-cos(uPhi0), sin(uPhi0)) * bendD
+      : vec2(-(sin(bendA) - sin(uPhi0)), cos(uPhi0) - cos(bendA)) / uKappa;
+    vec3 transformed = vec3(bendP.x + position.y * uTh * sin(bendA), bendP.y + position.y * uTh * cos(bendA), position.z);`;
+  const BEND_NORMAL = `
+    vec3 objectNormal = vec3(normal);
+    { float a = uPhi0 - uKappa * position.x; float c = cos(a), s = sin(a);
+      objectNormal = vec3(objectNormal.x * c + objectNormal.y * s, -objectNormal.x * s + objectNormal.y * c, objectNormal.z); }`;
+  function bendable(mat, u) {
+    mat.onBeforeCompile = (sh) => {
+      Object.assign(sh.uniforms, u);
+      sh.vertexShader = 'uniform float uPhi0;\nuniform float uKappa;\nuniform float uTh;\n' + sh.vertexShader
+        .replace('#include <beginnormal_vertex>', BEND_NORMAL)
+        .replace('#include <begin_vertex>', BEND_POS);
+    };
+    return mat;
+  }
+  // Indigo dye on sheer paper: each dyed layer multiplies what lies under it, so overlapping sheets deepen the blue.
+  const dyeColor = new THREE.Color(), seaColor = new THREE.Color();
+  const dyeMat = () => new THREE.MeshBasicMaterial({ color: dyeColor, blending: THREE.MultiplyBlending, transparent: true, depthWrite: false });
+  // today's sea and rivers are dyed into the two base pages, as deep as three layers
+  const seaMat = new THREE.MeshBasicMaterial({ color: seaColor, blending: THREE.MultiplyBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  seaMat.color = seaColor;
+  const seaGeo = new THREE.ShapeGeometry(pageShapes(landPolys[0]), 1); seaGeo.rotateX(-Math.PI / 2);
+  for (const sx of [1, -1]) { const m = new THREE.Mesh(seaGeo, seaMat); m.scale.x = sx; m.position.y = 0.004; m.renderOrder = 1; book.add(m); }
+  const filmGeo = new THREE.PlaneGeometry(W, H, 64, 1);
+  filmGeo.rotateX(-Math.PI / 2); filmGeo.translate(-W / 2, 0.5, 0);       // mid-thickness, inside the dyed parts
+  const filmMat = new THREE.MeshStandardMaterial({ color: 0xf6f1e6, map: washiTexture(), transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide, roughness: 1 });
+  const leaves = landPolys.map((sheet, i) => {
+    const u = { uPhi0: { value: 0 }, uKappa: { value: 0 }, uTh: { value: T } };
+    const dye = bendable(dyeMat(), u);
+    const mesh = new THREE.Mesh(extrude(pageShapes(sheet)), [dye, dye]);
+    mesh.frustumCulled = false;
+    // the sheet itself: thin, sheer paper across the whole page; only the water is dyed
+    const film = new THREE.Mesh(filmGeo, bendable(filmMat.clone(), u));
+    film.frustumCulled = false;
+    const pivot = new THREE.Group();
+    const mark = levelMark(labelOf(levels[i].level), u);
+    pivot.add(mesh, film, mark);
+    book.add(pivot);
+    return { pivot, u, mesh, film, mark, dye, p: i === 0 ? 1 : 0, held: false };
+  });
+
+  function levelMark(text, u) {            // printed on the underside, so it reads upright once the sheet is turned
+    const c = document.createElement('canvas'); c.width = 512; c.height = 96;
+    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+    const draw = () => {
+      const g = c.getContext('2d'); g.clearRect(0, 0, 512, 96);
+      g.fillStyle = 'rgba(240, 243, 248, 0.95)';
+      g.font = '700 54px "Shippori Mincho", "Hiragino Mincho ProN", serif';
+      g.textBaseline = 'middle'; g.fillText(text, 6, 50); tex.needsUpdate = true;
+    };
+    draw(); document.fonts?.ready.then(draw);
+    const geo = new THREE.PlaneGeometry(1.5, 0.28);
+    geo.rotateZ(Math.PI); geo.rotateX(Math.PI / 2);
+    geo.translate(-(margin + 0.8), -0.003, H / 2 - margin / 2);
+    const mat = bendable(new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }),
+      { uPhi0: u.uPhi0, uKappa: u.uKappa, uTh: { value: 1 } });
+    const m = new THREE.Mesh(geo, mat); m.frustumCulled = false;
+    return m;
+  }
+  function washiTexture() {                // undyed sheet: a faint ground with longer, brighter fibres
+    const c = document.createElement('canvas'); c.width = c.height = 1024;
+    const g = c.getContext('2d'); g.fillStyle = 'rgba(255,255,255,0.42)'; g.fillRect(0, 0, 1024, 1024);
+    let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    for (let k = 0; k < 900; k++) {
+      const x = rnd() * 1024, y = rnd() * 1024, a = rnd() * Math.PI * 2, len = 40 + rnd() * 160;
+      g.strokeStyle = `rgba(255,255,255,${0.25 + rnd() * 0.5})`; g.lineWidth = 0.6 + rnd() * 1.4;
+      g.beginPath(); g.moveTo(x, y);
+      g.bezierCurveTo(x + Math.cos(a) * len * 0.3 + (rnd() - 0.5) * 50, y + Math.sin(a) * len * 0.3 + (rnd() - 0.5) * 50,
+        x + Math.cos(a) * len * 0.7 + (rnd() - 0.5) * 50, y + Math.sin(a) * len * 0.7 + (rnd() - 0.5) * 50, x + Math.cos(a) * len, y + Math.sin(a) * len);
+      g.stroke();
+    }
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(1.5, 1.5 * H / W);
+    return t;
+  }
+  function paperTexture() {
+    const c = document.createElement('canvas'); c.width = c.height = 512;
+    const g = c.getContext('2d'); g.fillStyle = '#808080'; g.fillRect(0, 0, 512, 512);
+    let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    for (let k = 0; k < 3400; k++) {
+      const x = rnd() * 512, y = rnd() * 512, a = rnd() * Math.PI, len = 10 + rnd() * 60;
+      g.strokeStyle = rnd() > 0.5 ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.09)';
+      g.lineWidth = 0.5 + rnd() * 1.1;
+      g.beginPath(); g.moveTo(x, y);
+      g.quadraticCurveTo(x + Math.cos(a) * len * 0.5 + (rnd() - 0.5) * 14, y + Math.sin(a) * len * 0.5 + (rnd() - 0.5) * 14, x + Math.cos(a) * len, y + Math.sin(a) * len);
+      g.stroke();
+    }
+    const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(0.3, 0.3);
+    return t;
+  }
+
+  // ---------- page turning: sheet 0 (today's shoreline) is turned first and ends up at the bottom ----------
+  let sheer = 0.14, haze = 0.45;
+  const WHITE = new THREE.Color(1, 1, 1);
+  let turned = 1;                         // how many sheets lie on the read pile
+  const ease = (x) => x * x * (3 - 2 * x);
+  function applyLeaf(leaf, i) {
+    const e = ease(leaf.p), bow = SOFT * Math.sin(Math.PI * leaf.p);
+    leaf.u.uPhi0.value = (Math.PI - bow) * e;
+    leaf.u.uKappa.value = bow / W;
+    leaf.u.uTh.value = T;
+
+    leaf.pivot.position.y = THREE.MathUtils.lerp((N - 1 - i) * T, (i + 1) * T, e);
+    const flying = leaf.p > 0 && leaf.p < 1;
+    const rank = flying ? 60 : Math.round(leaf.pivot.position.y / T);       // draw lower sheets first, the sheet in the air last
+    // Unread sheets lie loosely on one another, and thin paper that is not pressed flat looks cloudy.
+    // Once a sheet is turned and laid on the land it clears.
+    const rest = THREE.MathUtils.lerp(haze, sheer, leaf.p);
+    leaf.film.material.opacity = rest + (Math.max(0.62, rest) - rest) * Math.sin(Math.PI * leaf.p) ** 0.6;
+    leaf.dye.color.copy(WHITE).lerp(dyeColor, THREE.MathUtils.lerp(1 - haze, 1, Math.min(1, leaf.p * 4)));
+    leaf.film.renderOrder = 10 + 2 * rank; leaf.mesh.renderOrder = 11 + 2 * rank; leaf.mark.renderOrder = 200;
+  }
+  function showMarks() {                  // sheets are sheer, so only the top turned sheet shows its printed level
+    let topTurned = -1;
+    leaves.forEach((l, i) => { if (l.p === 1) topTurned = i; });
+    leaves.forEach((l, i) => { l.mark.visible = i === topTurned || (l.p > 0.5 && l.p < 1); });
+  }
+  function stepLeaves(dt) {
+    for (let i = 0; i < N; i++) {
+      const leaf = leaves[i], target = i < turned ? 1 : 0;
+      if (leaf.held || leaf.p === target) continue;
+      if (reduceMotion) { leaf.p = target; applyLeaf(leaf, i); continue; }
+      const free = target === 1 ? (i === 0 || leaves[i - 1].p > 0.28) : (i === N - 1 || leaves[i + 1].p < 0.72);
+      if (!free) continue;
+      const d = dt / 0.8;
+      leaf.p = target === 1 ? Math.min(1, leaf.p + d) : Math.max(0, leaf.p - d);
+      applyLeaf(leaf, i);
+    }
+  }
+
+  // ---------- dragging a page ----------
+  let drag = null; const touches = new Set();
+  function releaseDrag(commit) {
+    if (!drag) return;
+    const d = drag; drag = null; canvas.classList.remove('turning');
+    if (d.leaf < 0) return;
+    const leaf = leaves[d.leaf]; leaf.held = false;
+    if (!commit) return;
+    if (d.dir > 0 && leaf.p > 0.3) setTurned(turned + 1);
+    else if (d.dir < 0 && leaf.p < 0.7) setTurned(turned - 1);
+  }
+  canvas.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'touch') { touches.add(e.pointerId); if (touches.size > 1) { releaseDrag(false); return; } }
+    else if (e.button !== 0) return;
+    drag = { id: e.pointerId, x: e.clientX, dir: 0, leaf: -1 };
+    try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* capture is optional */ }
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dx = e.clientX - drag.x;
+    if (!drag.dir) {
+      if (Math.abs(dx) < 6) return;
+      drag.dir = dx > 0 ? 1 : -1;                         // right: turn the next page; left: turn the last one back
+      const i = drag.dir > 0 ? turned : turned - 1;
+      const ok = drag.dir > 0 ? turned < N : turned > 1;
+      if (ok && leaves[i].p === (drag.dir > 0 ? 0 : 1)) { drag.leaf = i; leaves[i].held = true; canvas.classList.add('turning'); }
+    }
+    if (drag.leaf < 0) return;
+    const f = dx / Math.max(160, canvas.clientWidth * 0.36);
+    const leaf = leaves[drag.leaf];
+    leaf.p = THREE.MathUtils.clamp(drag.dir > 0 ? f : 1 + f, 0, 1);
+    applyLeaf(leaf, drag.leaf);
+  });
+  const endPointer = (e) => { touches.delete(e.pointerId); if (drag && e.pointerId === drag.id) releaseDrag(e.type === 'pointerup'); };
+  canvas.addEventListener('pointerup', endPointer);
+  canvas.addEventListener('pointercancel', endPointer);
+
+  // ---------- framing ----------
+  const view = { fy: 1, wide: true };
+  const OBLIQUE = new THREE.Vector3(0, 0.86, 0.62).normalize(), TOP = new THREE.Vector3(0, 1, 0.03).normalize();
+  const viewDir = OBLIQUE;
+  let viewTop = false, viewAnim = false;
+  let userZoom = 1, orbiting = false;
+  function fitDistance() {
+    const tan = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
+    const width = view.wide ? 2 * W * 1.1 : W * 1.16;
+    return Math.max((H * (viewTop ? 1.0 * 0.55 : 0.81 * 0.6)) / (tan * view.fy), (width / 2 * 1.12) / (tan * camera.aspect));
+  }
+  controls.addEventListener('start', () => { orbiting = true; viewAnim = false; });
+  $('viewBtn').addEventListener('click', () => {
+    viewTop = !viewTop; viewAnim = true; userZoom = 1;
+    $('viewBtn').textContent = viewTop ? '斜めから見る' : '真上から見る';
+  });
+  controls.addEventListener('end', () => { orbiting = false; userZoom = camera.position.distanceTo(controls.target) / fitDistance(); });
+  function resize() {
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    const top = document.querySelector('.top').getBoundingClientRect().bottom + 8;
+    const bottom = h - document.querySelector('.bar').getBoundingClientRect().top + 8;
+    view.fy = Math.max(0.3, (h - top - bottom) / h);
+    view.wide = w / (h * view.fy) > 1.35;                // room for both piles; otherwise frame the turned pile
+    const off = camera.position.clone().sub(controls.target);
+    controls.target.set(view.wide ? 0 : W / 2, 0.1, 0);
+    camera.position.copy(controls.target).add(off);
+    camera.setViewOffset(w, h, 0, (bottom - top) / 2, w, h);
+    camera.updateProjectionMatrix();
+  }
+  camera.position.copy(viewDir).multiplyScalar(40);
+  addEventListener('resize', resize);
+  resize();
+  camera.position.copy(controls.target).addScaledVector(viewDir, fitDistance());
+
+  // ---------- look ----------
+  const LOOK = ['soft', 'dye', 'sheer', 'haze', 'thick', 'bright', 'shade', 'light', 'elev'];
+  const DEFAULTS = Object.fromEntries(LOOK.map((k) => [k, +$(k).value]));
+  function applyLook() {
+    const v = Object.fromEntries(LOOK.map((k) => [k, +$(k).value]));
+    const a = THREE.MathUtils.degToRad(v.light), el = THREE.MathUtils.degToRad(v.elev);
+    sun.position.set(Math.sin(a) * Math.cos(el) * 30, Math.sin(el) * 30, -Math.cos(a) * Math.cos(el) * 30);
+    const E = 3.0 * (v.bright / 100), share = v.shade / 100;
+    hemi.intensity = E * (1 - share);
+    sun.intensity = Math.min(9, (E * share) / Math.sin(el));
+    T = v.thick / 100; SOFT = v.soft / 10;
+    sheer = v.sheer / 100; haze = v.haze / 100;
+    const d = v.dye / 100;
+    dyeColor.setRGB(1 - d, 1 - d * 0.58, 1 - d * 0.12, THREE.SRGBColorSpace);
+    seaColor.setRGB((1 - d) ** 3, (1 - d * 0.58) ** 3, (1 - d * 0.12) ** 3, THREE.SRGBColorSpace);
+    leaves.forEach(applyLeaf);
+    for (const k of LOOK) { const o = document.querySelector(`output[for="${k}"]`); if (o) o.textContent = v[k]; }
+    $('vals').textContent = LOOK.map((k) => `${k}=${v[k]}`).join(' ');
+    try { localStorage.setItem('suii-look-10', JSON.stringify(v)); } catch (e) { /* storage is optional */ }
+  }
+  try {
+    const saved = JSON.parse(localStorage.getItem('suii-look-10') || 'null');
+    if (saved) for (const k of LOOK) if (Number.isFinite(saved[k])) $(k).value = saved[k];
+  } catch (e) { /* storage is optional */ }
+  for (const k of LOOK) $(k).addEventListener('input', applyLook);
+  $('reset').addEventListener('click', () => { for (const k of LOOK) $(k).value = DEFAULTS[k]; applyLook(); });
+  $('copy').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText($('vals').textContent); $('copy').textContent = 'コピーしました'; }
+    catch (e) { $('copy').textContent = '下の文字列を選んでコピー'; }
+    setTimeout(() => ($('copy').textContent = '設定をコピー'), 1800);
+  });
+
+  // ---------- water level: one point on a fixed scale ----------
+  $('page').max = N;
+  $('ticks').innerHTML = levels.map((lv, i) => {
+    const x = (i / (N - 1)) * 100;
+    const label = lv.level === null ? '現状' : (Number.isInteger(lv.level * 2) ? `+${lv.level.toFixed(1)}m` : '');
+    return `<i style="left:${x}%"></i>` + (label ? `<span style="left:${x}%">${label}</span>` : '');
+  }).join('');
+  function setTurned(k) {
+    turned = Math.max(1, Math.min(N, k));
+    $('page').value = turned;
+    const lv = levels[turned - 1];
+    $('lvl').textContent = labelOf(lv.level);
+    $('lvlSub').textContent = lv.level === null
+      ? 'いまの海岸線。藍は海と川だけ'
+      : `水が届く陸地 ${Math.round(lv.below_km2)} km²（範囲内の陸地 ${Math.round(land_km2)} km² の ${Math.round((lv.below_km2 / land_km2) * 100)}%）`;
+    $('older').disabled = turned === 1;
+    $('newer').disabled = turned === N;
+  }
+  $('page').addEventListener('input', (e) => setTurned(+e.target.value));
+  $('older').addEventListener('click', () => setTurned(turned - 1));
+  $('newer').addEventListener('click', () => setTurned(turned + 1));
+  addEventListener('keydown', (e) => {
+    if (e.target instanceof HTMLInputElement) return;
+    if (e.key === 'ArrowRight') setTurned(turned + 1);
+    if (e.key === 'ArrowLeft') setTurned(turned - 1);
+  });
+
+  const PLACES = [["吉野川", 1.047, -0.539, "w"], ["眉山", -3.199, -3.259, ""], ["徳島駅", -0.634, -2.105, ""], ["徳島県庁", -0.09, -2.831, ""], ["徳島空港", 3.272, 3.075, ""], ["沖洲", 2.801, -3.041, ""], ["津田", 1.576, -4.02, ""], ["川内", 1.004, 0.695, ""], ["応神", -2.177, 1.395, ""], ["北島町", -0.982, 2.401, ""], ["松茂町", 1.453, 3.119, ""]];                    // [name, u, v, kind] in page coordinates; kind 'w' is a river
+  const placeEls = PLACES.map(([name, , , kind]) => {
+    const el = document.createElement('span'); el.className = 'place' + (kind ? ' ' + kind : ''); el.textContent = name;
+    $('places').appendChild(el); return el;
+  });
+  const pv = new THREE.Vector3();
+  function placeLabels() {
+    const w = canvas.clientWidth, h = canvas.clientHeight, y = turned * T + 0.02;
+    PLACES.forEach(([, u, v, kind], k) => {
+      pv.set(u + W / 2, y, -v).project(camera);
+      const x = (pv.x + 1) / 2 * w, sy = (1 - pv.y) / 2 * h;
+      placeEls[k].style.transform = kind === 'w' ? `translate(${x}px, ${sy}px) translate(-50%, -50%)` : `translate(${x + 9}px, ${sy - 6}px)`;
+      placeEls[k].style.visibility = pv.z < 1 ? 'visible' : 'hidden';
+    });
+  }
+
+  applyLook();
+  setTurned(1);
+  const clock = new THREE.Clock();
+  (function frame() {
+    const dt = Math.min(clock.getDelta(), 0.05);
+    stepLeaves(dt); showMarks();
+    if (!orbiting) {
+      const off = camera.position.clone().sub(controls.target);
+      if (viewAnim) {
+        const want = viewTop ? TOP : OBLIQUE, len = off.length();
+        off.normalize().lerp(want, reduceMotion ? 1 : 0.12).normalize();
+        if (off.distanceTo(want) < 0.002) { off.copy(want); viewAnim = false; }
+        off.multiplyScalar(len);
+      }
+      off.setLength(THREE.MathUtils.lerp(off.length(), fitDistance() * userZoom, reduceMotion ? 1 : 0.12));
+      camera.position.copy(controls.target).add(off);
+    }
+    controls.update();
+    renderer.render(scene, camera);
+    placeLabels();
+    requestAnimationFrame(frame);
+  })();
+  window.__progress = () => leaves.map((l) => +l.p.toFixed(2));
+  window.__ready = true;
+}
+</script>
+</body>
+</html>
