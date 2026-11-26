@@ -2,7 +2,7 @@
 
 海面が上がると、土地がどこから水に浸かっていくのかを、薄い紙を1丁ずつめくって見る習作です。場所は徳島（吉野川の河口）と仙台（名取川の河口と仙台空港）から選べます。めくれる高さは場所ごとに決めていて、徳島は+2mまで、仙台は+1.75mまでです（仙台は+2mで1枚のうちに倍以上へ広がるため）。
 
-公開ページ: https://structure-and-representation.github.io/sea-level-page-by-page/
+公開ページ: https://sea-level-page-by-page.structure-and-representation.com/
 
 ## 読み方
 
