@@ -128,7 +128,7 @@ button:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visibl
 
 <header class="top">
   <h1>水位をめくる</h1>
-  <p class="tag">習作 v0.16 ・ 標高5mメッシュ</p>
+  <p class="tag">習作 v0.17 ・ 標高5mメッシュ</p>
   <p class="regions" id="regions" role="group" aria-label="場所"></p>
   <p class="lede"><span>青いところが水、灰色が土地で、低い土地ほど濃い灰色です。</span><span>紙を右へめくるたびに海面が0.25m上がり、青が重なって濃くなります。</span></p>
 </header>
@@ -156,7 +156,7 @@ button:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visibl
     <div class="body">
       <dl>
         <div><dt>読み方</dt><dd>右のいちばん下の台紙が土地です。左の束は青い水の紙で、現状、海面+0.25m、+0.5m…と0.25mずつ上げながら右へめくります。<span id="rangeNote"></span>紙は薄く透ける和紙で、水が届くところだけを青で染めています。染めは重なるほど濃くなるので、右のページでは、早くから水に浸かっている場所ほど濃い青になります。左の未読の束は、紙がふんわり重なっているので白く曇って見えます。めくって右に置くと、紙が密着して澄みます。左の束は裏返す前なので、次の紙が左右反転して見えます。</dd></div>
-        <div><dt>操作</dt><dd>開いたときに一度だけ、表紙が開いて「現状」の紙がめくれます。クリックやキーで飛ばせます。紙を右へドラッグ（スワイプ）するとめくれ、左へで戻ります。下の目盛りと左右の矢印キーでも動きます。「真上から見る」で、真上からの視点に切り替わります。視点は、マウスの右ドラッグか2本指でも回せます。ホイールやピンチで拡大します。</dd></div>
+        <div><dt>操作</dt><dd>開いたときと場所を替えたときに、表紙が開いて「現状」の紙がめくれます。場所を替えると、本が机から下げられ、次の本が置かれます。クリックやキーで飛ばせます。紙を右へドラッグ（スワイプ）するとめくれ、左へで戻ります。下の目盛りと左右の矢印キーでも動きます。「真上から見る」で、真上からの視点に切り替わります。視点は、マウスの右ドラッグか2本指でも回せます。ホイールやピンチで拡大します。</dd></div>
         <div><dt>注意</dt><dd>その高さの水が、海や川から地続きで届く土地だけを水にしています。堤防の高さは標高データに含まれる範囲で反映していますが、水門は閉まらない前提で、薄い防潮壁は拾えていない可能性があります。決壊や排水は扱っていません。将来の予測ではありません。</dd></div>
         <div><dt>標高</dt><dd>国土地理院 <a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>（標高タイル・基盤地図情報数値標高モデル 5mメッシュ）を加工。高さの基準は東京湾平均海面。約16mの格子に平均して簡略化しています。台紙の灰色は標高を1m刻みで塗り分けたもので、0m以下がいちばん濃く、5mより上がいちばん淡い色です。<span id="dataNote"></span></dd></div>
         <div><dt>地名</dt><dd>右のページに、代表的な地名を載せています。位置は国土地理院の<a href="https://msearch.gsi.go.jp/address-search/AddressSearch?q=%E5%BE%B3%E5%B3%B6%E9%A7%85">地名検索</a>で調べた代表点です。<span id="placeNote"></span></dd></div>
@@ -195,28 +195,37 @@ const $ = (id) => document.getElementById(id);
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const REGIONS = [['tokushima', '徳島', '吉野川の河口'], ['sendai', '仙台', '名取川の河口と仙台空港']];
 const cache = {};
-let stop = null, current = null, introSeen = false;
+let book = null, current = null, shown = null, busy = false;
 $('regions').innerHTML = REGIONS.map(([id, name, sub]) => `<button type="button" data-id="${id}" aria-pressed="false"><b>${name}</b>${sub}</button>`).join('');
 async function show(id) {
   if (id === current) return;
   current = id;
   for (const b of $('regions').children) b.setAttribute('aria-pressed', String(b.dataset.id === id));
+  if (busy) return;                              // the swap under way picks up the latest choice when it gets there
+  busy = true;
   try {
-    const data = cache[id] ??= await (await fetch(id + '.json')).json();
-    if (current !== id) return;                 // another place was chosen while this one loaded
-    if (stop) stop();
-    stop = start(data);
-    try { history.replaceState(null, '', '#' + id); } catch (e) { /* the address is optional */ }
+    while (shown !== current) {
+      const want = current;
+      // each place is a book of its own: the one on the desk is taken away while the next is fetched
+      const [data] = await Promise.all([cache[want] ??= fetch(want + '.json').then((r) => r.json()), book?.leave()]);
+      if (want !== current) continue;            // another place was chosen meanwhile
+      const swapped = !!book;
+      book?.stop();
+      book = start(data, swapped);
+      shown = want;
+      try { history.replaceState(null, '', '#' + want); } catch (e) { /* the address is optional */ }
+    }
   } catch (err) {
     console.error(err);
     $('fail').style.display = 'grid';
   }
+  busy = false;
 }
 $('regions').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) show(b.dataset.id); });
 const asked = location.hash.slice(1);
 show(REGIONS.some(([id]) => id === asked) ? asked : 'tokushima');
 
-function start(data) {
+function start(data, swapped) {
   const { W, H, levels, land: landPolys, land_km2, margin } = data;
   const ac = new AbortController(), signal = ac.signal;
   const on = (target, type, fn) => target.addEventListener(type, fn, { signal });
@@ -224,7 +233,8 @@ function start(data) {
   $('dataNote').textContent = data.note; $('rangeNote').textContent = data.range; $('placeNote').textContent = data.placeNote;
   $('viewBtn').textContent = '真上から見る';
   const N = landPolys.length;
-  const playIntro = !introSeen && !reduceMotion; introSeen = true;
+  const playIntro = !reduceMotion;          // the book is opened in front of the reader, on the first load and after a swap
+  const FAR = 34, SLIDE = swapped ? 0.7 : 0;  // a swapped-in book first slides onto the desk from the right
   let T = 0.02;                     // sheet thickness
   let SOFT = 1.2;                   // how far a turning sheet bows, in radians
   const canvas = $('stage').cloneNode(false); $('stage').replaceWith(canvas);   // a fresh canvas for each place
@@ -261,6 +271,7 @@ function start(data) {
 
   const fibre = paperTexture();
   const book = new THREE.Group(); scene.add(book);
+  book.add(sun, sun.target);           // the light travels with the book, so its shadow stays whole while it slides
   // cover under both piles, the land's base page on the right, a plain backing on the left
   const coverMat = new THREE.MeshStandardMaterial({ color: 0xdcdcd6, roughness: 0.95 });
   // The book is bound on the right. Its front cover carries the land on the inside: closed, it lies face down on the pile;
@@ -368,20 +379,22 @@ function start(data) {
   });
 
   function titleSlip() {                   // a paper slip on the outside of the front cover, read top to bottom
-    const c = document.createElement('canvas'); c.width = 220; c.height = 760;
+    const c = document.createElement('canvas'); c.width = 220; c.height = 1040;
     const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
     const draw = () => {
-      const g = c.getContext('2d'); g.fillStyle = '#f7f7f3'; g.fillRect(0, 0, 220, 760);
-      g.strokeStyle = 'rgba(35,35,31,0.35)'; g.lineWidth = 2; g.strokeRect(9, 9, 202, 742);
+      const g = c.getContext('2d'); g.fillStyle = '#f7f7f3'; g.fillRect(0, 0, 220, 1040);
+      g.strokeStyle = 'rgba(35,35,31,0.35)'; g.lineWidth = 2; g.strokeRect(9, 9, 202, 1022);
       g.fillStyle = '#23231f'; g.textAlign = 'center'; g.textBaseline = 'middle';
       g.font = '300 96px "Noto Sans JP", "Hiragino Sans", sans-serif';
       [...'水位をめくる'].forEach((ch, k) => g.fillText(ch, 110, 100 + k * 112));
+      g.font = '400 64px "Noto Sans JP", "Hiragino Sans", sans-serif';     // which book this is: the place, smaller, below the title
+      [...data.name].forEach((ch, k) => g.fillText(ch, 110, 820 + k * 80));
       tex.needsUpdate = true;
     };
     draw(); document.fonts?.ready.then(draw);
-    const geo = new THREE.PlaneGeometry(1.1, 3.8);
+    const geo = new THREE.PlaneGeometry(1.1, 5.2);
     geo.rotateX(Math.PI / 2); geo.rotateY(Math.PI);
-    geo.translate(W - 1.25, -0.062, -H / 2 + 2.7);
+    geo.translate(W - 1.25, -0.062, -H / 2 + 3.4);
     return new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, roughness: 1, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }));   // kept clear of the board, so the two never fight for the same depth
   }
   function levelMark(text, u) {            // printed on the underside, so it reads upright once the sheet is turned
@@ -624,31 +637,39 @@ function start(data) {
   }
 
   applyLook();
-  // ---------- opening, on the first load only: the closed book, the cover opening, then today's sheet turning ----------
+  // ---------- opening: the closed book (slid in from the right after a swap), the cover opening, then today's sheet turning ----------
   let intro = playIntro ? 0 : -1;         // seconds played; -1 once it is over
   function endIntro() {
     if (intro < 0) return;
-    intro = -1; front.rotation.z = 0; $('places').style.opacity = ''; resize();
+    intro = -1; front.rotation.z = 0; book.position.x = 0; $('places').style.opacity = ''; resize();
     if (leaves[0].p === 0 && turned === 0) { leaves[0].p = 1; applyLeaf(leaves[0], 0); }
     if (turned === 0) setTurned(1);
   }
   if (playIntro) {
     turned = 0; leaves.forEach(applyLeaf);
-    front.rotation.z = Math.PI; $('places').style.opacity = 0; resize();
+    front.rotation.z = Math.PI; book.position.x = swapped ? FAR : 0; $('places').style.opacity = 0; resize();
     for (const type of ['pointerdown', 'keydown', 'wheel']) on(window, type, endIntro);
-    $('lvl').textContent = '現状'; $('lvlSub').textContent = 'いまの海岸線。青は海と川だけ'; $('older').disabled = true;
+    $('page').value = 1; $('lvl').textContent = '現状'; $('lvlSub').textContent = 'いまの海岸線。青は海と川だけ'; $('older').disabled = true;
   } else setTurned(1);
+  let leaving = null;
   const clock = new THREE.Clock();
   (function frame() {
     if (dead) return;
     const dt = Math.min(clock.getDelta(), 0.05);
     if (intro >= 0) {
       intro += dt;
-      const e = ease(Math.min(1, Math.max(0, (intro - 0.6) / 1.4)));
+      book.position.x = SLIDE ? FAR * (1 - Math.min(1, intro / SLIDE)) ** 3 : 0;
+      const e = ease(Math.min(1, Math.max(0, (intro - SLIDE - (swapped ? 0.25 : 0.6)) / 1.4)));
       front.rotation.z = Math.PI * (1 - e);
       if (!view.wide) { const dx = THREE.MathUtils.lerp(-W / 2, W / 2, e) - controls.target.x; controls.target.x += dx; camera.position.x += dx; }
-      if (intro >= 2.0 && turned === 0) { front.rotation.z = 0; $('places').style.opacity = ''; setTurned(1); }
-      if (intro >= 3.0) endIntro();
+      if (e >= 1 && turned === 0) { front.rotation.z = 0; $('places').style.opacity = ''; setTurned(1); }
+      if (e >= 1 && leaves[0].p === 1) endIntro();
+    }
+    if (leaving) {
+      leaving.t += dt;
+      const k = Math.min(1, leaving.t / 0.55);
+      book.position.x = -FAR * k ** 3;
+      if (k >= 1) { leaving.done(); leaving = null; dead = true; return; }
     }
     stepLeaves(dt); showMarks();
     if (!orbiting) {
@@ -669,12 +690,17 @@ function start(data) {
   })();
   window.__progress = () => leaves.map((l) => +l.p.toFixed(2));
   window.__ready = data.id;
-  return () => {
+  const leave = () => new Promise((done) => {      // the open book slides off the desk to the left
+    if (reduceMotion || dead) return done();
+    endIntro(); $('places').style.opacity = 0;
+    leaving = { t: 0, done };
+  });
+  return { leave, stop: () => {
     dead = true; ac.abort(); controls.dispose();
     scene.traverse((o) => { o.geometry?.dispose(); for (const m of [].concat(o.material || [])) { m.map?.dispose(); m.dispose(); } });
     renderer.dispose(); renderer.forceContextLoss();
-    $('places').replaceChildren();
-  };
+    $('places').replaceChildren(); $('places').style.opacity = '';
+  } };
 }
 </script>
 </body>
