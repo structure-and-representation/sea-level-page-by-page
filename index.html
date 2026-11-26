@@ -382,8 +382,8 @@ function start(data) {
     draw(); document.fonts?.ready.then(draw);
     const geo = new THREE.PlaneGeometry(1.1, 3.8);
     geo.rotateX(Math.PI / 2); geo.rotateY(Math.PI);
-    geo.translate(W - 1.25, -0.0605, -H / 2 + 2.7);
-    return new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, roughness: 1 }));
+    geo.translate(W - 1.25, -0.062, -H / 2 + 2.7);
+    return new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, roughness: 1, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }));   // kept clear of the board, so the two never fight for the same depth
   }
   function levelMark(text, u) {            // printed on the underside, so it reads upright once the sheet is turned
     const c = document.createElement('canvas'); c.width = 512; c.height = 96;
