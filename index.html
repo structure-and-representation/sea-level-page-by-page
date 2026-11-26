@@ -104,6 +104,15 @@ button:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visibl
 #veilTop { top: 0; height: calc(var(--top-h, 150px) + 36px); background: linear-gradient(to bottom, var(--desk) 0, var(--desk) calc(100% - 44px), transparent 100%); }
 #veilBottom { bottom: 0; height: calc(var(--bottom-h, 150px) + 36px); background: linear-gradient(to top, var(--desk) 0, var(--desk) calc(100% - 44px), transparent 100%); }
 body.free .veil { opacity: 0.94; }
+/* the note about the study is a plain text link at the foot of the page; its panel opens above the link */
+.foot { position: fixed; right: 18px; bottom: 12px; font-size: 11px; }
+.foot summary { list-style: none; cursor: pointer; color: var(--ink-soft); text-decoration: underline; text-underline-offset: 3px; }
+.foot summary::-webkit-details-marker { display: none; }
+.foot summary:hover { color: var(--ink); }
+.foot .body { position: fixed; right: 16px; bottom: 40px; width: min(360px, calc(100vw - 32px)); max-height: 62vh; overflow-y: auto; padding: 14px; font-size: 12px; background: var(--desk-deep); border: 1px solid var(--line); border-radius: 4px; }
+.foot dl { margin: 0; display: grid; gap: 8px; }
+.foot dt { color: var(--ink-soft); }
+.foot dd { margin: 0; }
 #places { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
 .place {
   position: absolute; left: 0; top: 0; white-space: nowrap; will-change: transform;
@@ -122,7 +131,8 @@ body.free .veil { opacity: 0.94; }
   .tools > button { padding: 4px 10px; }
   .tools summary { padding: 4px 10px; }
   .tools details[open] { max-height: 46vh; }
-  .bar { padding: 10px 12px 8px; bottom: 10px; }
+  .bar { padding: 10px 12px 8px; bottom: 24px; }
+  .foot { right: 0; left: 0; bottom: 8px; text-align: center; }
   .level b { font-size: 24px; }
 }
 </style>
@@ -137,7 +147,7 @@ body.free .veil { opacity: 0.94; }
 
 <header class="top">
   <h1>水位をめくる</h1>
-  <p class="tag">習作 v0.18 ・ 標高5mメッシュ</p>
+  <p class="tag">習作 v0.19 ・ 標高5mメッシュ</p>
   <p class="regions" id="regions" role="group" aria-label="場所"></p>
   <p class="lede"><span>青いところが水、灰色が土地で、低い土地ほど濃い灰色です。</span><span>紙を右へめくるたびに海面が0.25m上がり、青が重なって濃くなります。</span></p>
 </header>
@@ -161,19 +171,6 @@ body.free .veil { opacity: 0.94; }
       <code id="vals"></code>
     </div>
   </details>
-  <details id="about">
-    <summary>この習作について</summary>
-    <div class="body">
-      <dl>
-        <div><dt>読み方</dt><dd>右のいちばん下の台紙が土地です。左の束は青い水の紙で、現状、海面+0.25m、+0.5m…と0.25mずつ上げながら右へめくります。<span id="rangeNote"></span>紙は薄く透ける和紙で、水が届くところだけを青で染めています。染めは重なるほど濃くなるので、右のページでは、早くから水に浸かっている場所ほど濃い青になります。左の未読の束は、紙がふんわり重なっているので白く曇って見えます。めくって右に置くと、紙が密着して澄みます。左の束は裏返す前なので、次の紙が左右反転して見えます。</dd></div>
-        <div><dt>操作</dt><dd>開いたときと場所を替えたときに、表紙が開いて「現状」の紙がめくれます。場所を替えると、本が机から下げられ、次の本が置かれます。クリックやキーで飛ばせます。紙を右へドラッグ（スワイプ）するとめくれ、左へで戻ります。下の目盛りと左右の矢印キーでも動きます。「真上から見る」で、真上からの視点に切り替わります。ホイールやピンチで、ポインタや指の位置に寄ります。寄ったあとは、マウスの右ドラッグか2本指のドラッグで見る位置を動かせます。「全体を見る」で元に戻ります。</dd></div>
-        <div><dt>注意</dt><dd>その高さの水が、海や川から地続きで届く土地だけを水にしています。堤防の高さは標高データに含まれる範囲で反映していますが、水門は閉まらない前提で、薄い防潮壁は拾えていない可能性があります。決壊や排水は扱っていません。将来の予測ではありません。</dd></div>
-        <div><dt>標高</dt><dd>国土地理院 <a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>（標高タイル・基盤地図情報数値標高モデル 5mメッシュ）を加工。高さの基準は東京湾平均海面。約16mの格子に平均して簡略化しています。台紙の灰色は標高を1m刻みで塗り分けたもので、0m以下がいちばん濃く、5mより上がいちばん淡い色です。<span id="dataNote"></span></dd></div>
-        <div><dt>地名</dt><dd>右のページに、代表的な地名を載せています。位置は国土地理院の<a href="https://msearch.gsi.go.jp/address-search/AddressSearch?q=%E5%BE%B3%E5%B3%B6%E9%A7%85">地名検索</a>で調べた代表点です。<span id="placeNote"></span></dd></div>
-        <div><dt>着想</dt><dd>Caroline Rose の水深の本（<a href="https://hackaday.com/2013/10/03/making-a-bathymetric-book-by-hand-and-searching-for-an-easier-way">Hackaday 2013年の紹介</a>）、Gordon Tu「<a href="https://gordontu.com/maps/paper-china/live/?lang=en">Paper China</a>」</dd></div>
-      </dl>
-    </div>
-  </details>
 </nav>
 
 <section class="bar" aria-label="水位">
@@ -188,6 +185,22 @@ body.free .veil { opacity: 0.94; }
   </div>
   <p class="hint">紙を右へドラッグするとめくれます。左へで戻ります。</p>
 </section>
+
+<footer class="foot">
+<details id="about">
+    <summary>この習作について</summary>
+    <div class="body">
+      <dl>
+        <div><dt>読み方</dt><dd>右のいちばん下の台紙が土地です。左の束は青い水の紙で、現状、海面+0.25m、+0.5m…と0.25mずつ上げながら右へめくります。<span id="rangeNote"></span>紙は薄く透ける和紙で、水が届くところだけを青で染めています。染めは重なるほど濃くなるので、右のページでは、早くから水に浸かっている場所ほど濃い青になります。左の未読の束は、紙がふんわり重なっているので白く曇って見えます。めくって右に置くと、紙が密着して澄みます。左の束は裏返す前なので、次の紙が左右反転して見えます。</dd></div>
+        <div><dt>操作</dt><dd>開いたときと場所を替えたときに、表紙が開いて「現状」の紙がめくれます。場所を替えると、本が机から下げられ、次の本が置かれます。クリックやキーで飛ばせます。紙を右へドラッグ（スワイプ）するとめくれ、左へで戻ります。下の目盛りと左右の矢印キーでも動きます。「真上から見る」で、真上からの視点に切り替わります。ホイールやピンチで、ポインタや指の位置に寄ります。寄ったあとは、マウスの右ドラッグか2本指のドラッグで見る位置を動かせます。「全体を見る」で元に戻ります。</dd></div>
+        <div><dt>注意</dt><dd>その高さの水が、海や川から地続きで届く土地だけを水にしています。堤防の高さは標高データに含まれる範囲で反映していますが、水門は閉まらない前提で、薄い防潮壁は拾えていない可能性があります。決壊や排水は扱っていません。将来の予測ではありません。</dd></div>
+        <div><dt>標高</dt><dd>国土地理院 <a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>（標高タイル・基盤地図情報数値標高モデル 5mメッシュ）を加工。高さの基準は東京湾平均海面。約16mの格子に平均して簡略化しています。台紙の灰色は標高を1m刻みで塗り分けたもので、0m以下がいちばん濃く、5mより上がいちばん淡い色です。<span id="dataNote"></span></dd></div>
+        <div><dt>地名</dt><dd>右のページに、代表的な地名を載せています。位置は国土地理院の<a href="https://msearch.gsi.go.jp/address-search/AddressSearch?q=%E5%BE%B3%E5%B3%B6%E9%A7%85">地名検索</a>で調べた代表点です。<span id="placeNote"></span></dd></div>
+        <div><dt>着想</dt><dd>Caroline Rose の水深の本（<a href="https://hackaday.com/2013/10/03/making-a-bathymetric-book-by-hand-and-searching-for-an-easier-way">Hackaday 2013年の紹介</a>）、Gordon Tu「<a href="https://gordontu.com/maps/paper-china/live/?lang=en">Paper China</a>」</dd></div>
+      </dl>
+    </div>
+</details>
+</footer>
 
 <div class="fail" id="fail">3D表示を開始できませんでした。WebGLが有効なブラウザで開き直してください。</div>
 
@@ -231,6 +244,7 @@ async function show(id) {
   }
   busy = false;
 }
+addEventListener('pointerdown', (e) => { if (!$('about').contains(e.target)) $('about').open = false; });   // a press anywhere else puts the note away
 $('regions').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) show(b.dataset.id); });
 const asked = location.hash.slice(1);
 show(REGIONS.some(([id]) => id === asked) ? asked : 'tokushima');
