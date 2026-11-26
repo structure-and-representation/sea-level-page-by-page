@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>水位をめくる</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  /* layout: full-bleed book on a dark desk; title top-left, two small drawers top-right, one water-level bar at the bottom.
+  /* layout: full-bleed book on a light, paper-coloured desk; title top-left, two small drawers top-right, one water-level bar at the bottom.
      Blue is reserved for water: the pages and the level marker. Nothing else is blue. */
-  --desk: #23211e;
-  --desk-deep: #171614;
-  --paper: #f3efe6;
-  --ink: #ece8df;
-  --ink-soft: #a8a297;
-  --line: rgba(236, 232, 223, 0.2);
-  --water: #7fa5d6;
-  --font-display: "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif;
-  --font-body: "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
-  color-scheme: dark;
+  --desk: #f5f5f0;
+  --desk-deep: #fbfbf8;
+  --paper: #23231f;
+  --ink: #23231f;
+  --ink-soft: #6f6f69;
+  --line: rgba(35, 35, 31, 0.22);
+  --water: #5b7ea3;
+  --font-display: "Noto Sans JP", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  --font-body: "Noto Sans JP", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  color-scheme: light;
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
@@ -32,11 +32,11 @@ body {
 #stage.turning { cursor: grabbing; }
 
 .top { position: fixed; left: 20px; top: 16px; max-width: calc(100% - 240px); pointer-events: none; }
-h1 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 20px; line-height: 1.35; letter-spacing: 0.04em; }
+h1 { margin: 0; font-family: var(--font-display); font-weight: 300; font-size: 26px; line-height: 1.3; letter-spacing: 0.02em; }
 .tag { margin: 2px 0 0; color: var(--ink-soft); font-size: 12px; }
 .regions { margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 2px 18px; pointer-events: auto; }
 .regions button { appearance: none; background: none; border: 0; border-bottom: 1px solid transparent; padding: 2px 0; font: inherit; font-size: 13px; color: var(--ink-soft); cursor: pointer; }
-.regions button b { font-family: var(--font-display); font-size: 16px; font-weight: 700; letter-spacing: 0.06em; margin-right: 6px; }
+.regions button b { font-family: var(--font-display); font-size: 16px; font-weight: 400; letter-spacing: 0.04em; margin-right: 6px; }
 .regions button:hover { color: var(--ink); }
 .regions button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--ink-soft); cursor: default; }
 .regions button:focus-visible { outline: 2px solid var(--ink-soft); outline-offset: 3px; }
@@ -78,7 +78,7 @@ button:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visibl
 }
 .level { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .level b {
-  white-space: nowrap; font-family: var(--font-display); font-weight: 700; font-size: 28px; line-height: 1.15;
+  white-space: nowrap; font-family: var(--font-display); font-weight: 300; font-size: 32px; line-height: 1.15;
   font-variant-numeric: tabular-nums; color: var(--paper);
 }
 .level span { color: var(--ink-soft); font-size: 12px; }
@@ -88,10 +88,10 @@ button:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visibl
 .track { flex: 1; min-width: 0; }
 /* one point on a fixed scale: the rail is the same on both sides of the marker */
 #page { -webkit-appearance: none; appearance: none; display: block; width: 100%; height: 22px; margin: 0; background: transparent; cursor: pointer; }
-#page::-webkit-slider-runnable-track { height: 2px; background: var(--ink-soft); border-radius: 0; }
-#page::-moz-range-track { height: 2px; background: var(--ink-soft); }
+#page::-webkit-slider-runnable-track { height: 1px; background: var(--ink); border-radius: 0; }
+#page::-moz-range-track { height: 1px; background: var(--ink); }
 #page::-moz-range-progress { background: transparent; }
-#page::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; margin-top: -7px; border-radius: 50%; background: var(--water); border: 2px solid var(--paper); }
+#page::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; margin-top: -8px; border-radius: 50%; background: var(--water); border: 1.5px solid var(--paper); }
 #page::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--water); border: 2px solid var(--paper); }
 .ticks { position: relative; height: 26px; margin: 0 8px; }
 .ticks i { position: absolute; top: 0; width: 1px; height: 6px; background: var(--ink-soft); }
@@ -101,15 +101,16 @@ button:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visibl
 #places { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
 .place {
   position: absolute; left: 0; top: 0; white-space: nowrap; will-change: transform;
-  font-size: 12px; line-height: 1; color: #26221d; letter-spacing: 0.04em;
-  text-shadow: 0 0 2px #f3efe6, 0 0 2px #f3efe6, 0 0 4px #f3efe6, 0 0 6px #f3efe6;
+  font-size: 12px; line-height: 1; color: #23231f; letter-spacing: 0.04em;
+  text-shadow: 0 0 2px #f5f5f0, 0 0 2px #f5f5f0, 0 0 4px #f5f5f0, 0 0 6px #f5f5f0;
 }
-.place::before { content: ""; position: absolute; left: -9px; top: 4px; width: 4px; height: 4px; border-radius: 50%; background: #26221d; box-shadow: 0 0 0 1.5px #f3efe6; }
-.place.w { font-family: var(--font-display); font-size: 14px; letter-spacing: 0.5em; color: #f6f2e9; text-shadow: 0 0 2px #14244f, 0 0 4px #14244f, 0 0 6px #14244f; }
+.place::before { content: ""; position: absolute; left: -9px; top: 4px; width: 4px; height: 4px; border-radius: 50%; background: #23231f; box-shadow: 0 0 0 1.5px #f5f5f0; }
+.place.w { font-family: var(--font-display); font-size: 14px; letter-spacing: 0.5em; color: #fbfbf8; text-shadow: 0 0 2px #3d5c80, 0 0 4px #3d5c80, 0 0 6px #3d5c80; }
 .place.w::before { display: none; }
 .fail { position: fixed; inset: 0; display: none; place-items: center; padding: 24px; text-align: center; }
 @media (max-width: 640px) {
   .top { left: 14px; top: 10px; max-width: calc(100% - 28px); }
+  h1 { font-size: 21px; }
   .lede { display: none; }
   .tools { top: 100px; right: 14px; left: 14px; flex-direction: row; flex-wrap: wrap; align-items: flex-start; }
   .tools > button { padding: 4px 10px; }
@@ -121,15 +122,15 @@ button:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visibl
 </style>
 </head>
 <body>
-<canvas id="stage" aria-label="薄く透ける紙を1丁ずつ右へめくり重ねる本。藍で染めたところが水で、染めていないところから土地が透けて見える"></canvas>
+<canvas id="stage" aria-label="薄く透ける紙を1丁ずつ右へめくり重ねる本。青で染めたところが水で、染めていないところから土地が透けて見える"></canvas>
 
 <div id="places" aria-hidden="true"></div>
 
 <header class="top">
   <h1>水位をめくる</h1>
-  <p class="tag">習作 v0.13 ・ 標高5mメッシュ</p>
+  <p class="tag">習作 v0.14 ・ 標高5mメッシュ</p>
   <p class="regions" id="regions" role="group" aria-label="場所"></p>
-  <p class="lede"><span>藍で染めたところが水、白く残っているのが土地です。</span><span>紙を右へめくるたびに海面が0.25m上がり、藍が重なって濃くなります。</span></p>
+  <p class="lede"><span>青いところが水、灰色が土地で、低い土地ほど濃い灰色です。</span><span>紙を右へめくるたびに海面が0.25m上がり、青が重なって濃くなります。</span></p>
 </header>
 
 <nav class="tools" aria-label="設定と説明">
@@ -139,7 +140,7 @@ button:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visibl
     <div class="body">
       <div class="row"><label for="soft">紙の柔らかさ</label><input id="soft" type="range" min="0" max="20" value="12"><output for="soft"></output></div>
       <div class="row"><label for="dye">染めの濃さ</label><input id="dye" type="range" min="8" max="45" value="26"><output for="dye"></output></div>
-      <div class="row"><label for="sheer">紙の濃さ</label><input id="sheer" type="range" min="0" max="50" value="14"><output for="sheer"></output></div>
+      <div class="row"><label for="sheer">紙の濃さ</label><input id="sheer" type="range" min="0" max="50" value="3"><output for="sheer"></output></div>
       <div class="row"><label for="haze">未読の曇り</label><input id="haze" type="range" min="0" max="85" value="70"><output for="haze"></output></div>
       <div class="row"><label for="thick">紙の厚み</label><input id="thick" type="range" min="1" max="12" value="2"><output for="thick"></output></div>
       <div class="row"><label for="bright">明るさ</label><input id="bright" type="range" min="60" max="140" value="100"><output for="bright"></output></div>
@@ -154,10 +155,10 @@ button:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visibl
     <summary>この習作について</summary>
     <div class="body">
       <dl>
-        <div><dt>読み方</dt><dd>右のいちばん下の台紙が土地です。左の束は青い水の紙で、現状、海面+0.25m、+0.5m…と0.25mずつ上げながら右へめくります。<span id="rangeNote"></span>紙は薄く透ける和紙で、水が届くところだけを藍で染めています。染めは重なるほど濃くなるので、右のページでは、早くから水に浸かっている場所ほど濃い藍になります。左の未読の束は、紙がふんわり重なっているので白く曇って見えます。めくって右に置くと、紙が密着して澄みます。左の束は裏返す前なので、次の紙が左右反転して見えます。</dd></div>
+        <div><dt>読み方</dt><dd>右のいちばん下の台紙が土地です。左の束は青い水の紙で、現状、海面+0.25m、+0.5m…と0.25mずつ上げながら右へめくります。<span id="rangeNote"></span>紙は薄く透ける和紙で、水が届くところだけを青で染めています。染めは重なるほど濃くなるので、右のページでは、早くから水に浸かっている場所ほど濃い青になります。左の未読の束は、紙がふんわり重なっているので白く曇って見えます。めくって右に置くと、紙が密着して澄みます。左の束は裏返す前なので、次の紙が左右反転して見えます。</dd></div>
         <div><dt>操作</dt><dd>紙を右へドラッグ（スワイプ）するとめくれ、左へで戻ります。下の目盛りと左右の矢印キーでも動きます。「真上から見る」で、真上からの視点に切り替わります。視点は、マウスの右ドラッグか2本指でも回せます。ホイールやピンチで拡大します。</dd></div>
         <div><dt>注意</dt><dd>その高さの水が、海や川から地続きで届く土地だけを水にしています。堤防の高さは標高データに含まれる範囲で反映していますが、水門は閉まらない前提で、薄い防潮壁は拾えていない可能性があります。決壊や排水は扱っていません。将来の予測ではありません。</dd></div>
-        <div><dt>標高</dt><dd>国土地理院 <a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>（標高タイル・基盤地図情報数値標高モデル 5mメッシュ）を加工。高さの基準は東京湾平均海面。約16mの格子に平均して簡略化しています。<span id="dataNote"></span></dd></div>
+        <div><dt>標高</dt><dd>国土地理院 <a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>（標高タイル・基盤地図情報数値標高モデル 5mメッシュ）を加工。高さの基準は東京湾平均海面。約16mの格子に平均して簡略化しています。台紙の灰色は標高を1m刻みで塗り分けたもので、0m以下がいちばん濃く、5mより上がいちばん淡い色です。<span id="dataNote"></span></dd></div>
         <div><dt>地名</dt><dd>右のページに、代表的な地名を載せています。位置は国土地理院の<a href="https://msearch.gsi.go.jp/address-search/AddressSearch?q=%E5%BE%B3%E5%B3%B6%E9%A7%85">地名検索</a>で調べた代表点です。<span id="placeNote"></span></dd></div>
         <div><dt>着想</dt><dd>Caroline Rose の水深の本（<a href="https://hackaday.com/2013/10/03/making-a-bathymetric-book-by-hand-and-searching-for-an-easier-way">Hackaday 2013年の紹介</a>）、Gordon Tu「<a href="https://gordontu.com/maps/paper-china/live/?lang=en">Paper China</a>」</dd></div>
       </dl>
@@ -228,12 +229,12 @@ function start(data) {
   const canvas = $('stage').cloneNode(false); $('stage').replaceWith(canvas);   // a fresh canvas for each place
   const labelOf = (L) => (L === null ? '現状' : `海面 +${L.toFixed(2)} m`);
 
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, stencil: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x23211e);
+  scene.background = new THREE.Color(0xf5f5f0);
   const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 200);
   const controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true;
@@ -253,18 +254,22 @@ function start(data) {
   sun.shadow.bias = -0.0002; sun.shadow.normalBias = 0.004;
   scene.add(hemi, sun, sun.target);
 
-  const desk = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshStandardMaterial({ color: 0x2b2825, roughness: 1 }));
+  const desk = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.ShadowMaterial({ opacity: 0.22 }));   // the desk is the page colour itself; only shadows are drawn on it
   desk.rotation.x = -Math.PI / 2; desk.position.y = -0.07; desk.receiveShadow = true;
   scene.add(desk);
 
   const fibre = paperTexture();
   const book = new THREE.Group(); scene.add(book);
   // cover under both piles, the land's base page on the right, a plain backing on the left
-  const coverMat = new THREE.MeshStandardMaterial({ color: 0x3b332b, roughness: 0.95 });
+  const coverMat = new THREE.MeshStandardMaterial({ color: 0xdcdcd6, roughness: 0.95 });
   const cover = new THREE.Mesh(new THREE.BoxGeometry(2 * W + 0.24, 0.04, H + 0.24), coverMat);
   cover.position.y = -0.04; cover.receiveShadow = true; cover.castShadow = true;
-  const landMat = new THREE.MeshStandardMaterial({ color: 0xece4d2, roughness: 1, bumpMap: fibre, bumpScale: 0.6 });
-  const backing = new THREE.Mesh(new THREE.BoxGeometry(W, 0.02, H), landMat);
+  // the land's heights are printed on the base pages in neutral greys: the lower the land, the darker
+  const mirrored = new THREE.Texture(); mirrored.wrapS = THREE.RepeatWrapping; mirrored.repeat.x = -1; mirrored.offset.x = 1; mirrored.colorSpace = THREE.SRGBColorSpace; mirrored.anisotropy = 8;
+  const heights = new THREE.TextureLoader().load(data.id + '.png', (t) => { mirrored.image = t.image; mirrored.needsUpdate = true; }); heights.colorSpace = THREE.SRGBColorSpace; heights.anisotropy = 8;
+  const landMat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: heights, roughness: 1, bumpMap: fibre, bumpScale: 0.6 });
+  const backMat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: mirrored, roughness: 1, bumpMap: fibre, bumpScale: 0.6 });
+  const backing = new THREE.Mesh(new THREE.BoxGeometry(W, 0.02, H), backMat);
   backing.position.set(-W / 2, -0.01, 0); backing.receiveShadow = true;
   const base = new THREE.Mesh(new THREE.BoxGeometry(W, 0.02, H), landMat);
   base.position.set(W / 2, -0.01, 0); base.receiveShadow = true;
@@ -319,30 +324,38 @@ function start(data) {
     };
     return mat;
   }
-  // Indigo dye on sheer paper: each dyed layer multiplies what lies under it, so overlapping sheets deepen the blue.
-  const dyeColor = new THREE.Color(), seaColor = new THREE.Color();
-  const dyeMat = () => new THREE.MeshBasicMaterial({ color: dyeColor, blending: THREE.MultiplyBlending, transparent: true, depthWrite: false });
-  // today's sea and rivers are dyed into the two base pages, as deep as three layers
-  const seaMat = new THREE.MeshBasicMaterial({ color: seaColor, blending: THREE.MultiplyBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  // Water hides the land under it, then deepens: the first dyed sheet over a place covers the grey land with a pale blue,
+  // and every dyed sheet above that multiplies it darker. The stencil marks where a pile already holds water.
+  const dyeColor = new THREE.Color(), seaColor = new THREE.Color(), PALE = new THREE.Color(0xa9bfd6);
+  const dyeMat = () => new THREE.MeshBasicMaterial({ color: dyeColor, blending: THREE.MultiplyBlending, transparent: true, depthWrite: false,
+    stencilWrite: true, stencilFunc: THREE.AlwaysStencilFunc, stencilRef: 1, stencilZPass: THREE.ReplaceStencilOp });
+  const coverMat2 = () => new THREE.MeshBasicMaterial({ color: PALE.clone(), transparent: true, depthWrite: false,
+    stencilWrite: true, stencilFunc: THREE.NotEqualStencilFunc, stencilRef: 1, stencilZPass: THREE.KeepStencilOp });
+  // today's sea and rivers are printed on the two base pages, as deep as three layers
+  const seaMat = new THREE.MeshBasicMaterial({ color: seaColor, transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+    stencilWrite: true, stencilFunc: THREE.AlwaysStencilFunc, stencilRef: 1, stencilZPass: THREE.ReplaceStencilOp });
   seaMat.color = seaColor;
   const seaGeo = new THREE.ShapeGeometry(pageShapes(landPolys[0]), 1); seaGeo.rotateX(-Math.PI / 2);
   for (const sx of [1, -1]) { const m = new THREE.Mesh(seaGeo, seaMat); m.scale.x = sx; m.position.y = 0.004; m.renderOrder = 1; book.add(m); }
   const filmGeo = new THREE.PlaneGeometry(W, H, 64, 1);
   filmGeo.rotateX(-Math.PI / 2); filmGeo.translate(-W / 2, 0.5, 0);       // mid-thickness, inside the dyed parts
-  const filmMat = new THREE.MeshStandardMaterial({ color: 0xf6f1e6, map: washiTexture(), transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide, roughness: 1 });
+  const filmMat = new THREE.MeshStandardMaterial({ color: 0xf8f8f4, map: washiTexture(), transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide, roughness: 1 });
   const leaves = landPolys.map((sheet, i) => {
     const u = { uPhi0: { value: 0 }, uKappa: { value: 0 }, uTh: { value: T } };
     const dye = bendable(dyeMat(), u);
     const mesh = new THREE.Mesh(extrude(pageShapes(sheet)), [dye, dye]);
     mesh.frustumCulled = false;
+    const cover = bendable(coverMat2(), u);
+    const lid = new THREE.Mesh(mesh.geometry, [cover, cover]);
+    lid.frustumCulled = false;
     // the sheet itself: thin, sheer paper across the whole page; only the water is dyed
     const film = new THREE.Mesh(filmGeo, bendable(filmMat.clone(), u));
     film.frustumCulled = false;
     const pivot = new THREE.Group();
     const mark = levelMark(labelOf(levels[i].level), u);
-    pivot.add(mesh, film, mark);
+    pivot.add(lid, mesh, film, mark);
     book.add(pivot);
-    return { pivot, u, mesh, film, mark, dye, p: i === 0 ? 1 : 0, held: false };
+    return { pivot, u, mesh, lid, cover, film, mark, dye, p: i === 0 ? 1 : 0, held: false };
   });
 
   function levelMark(text, u) {            // printed on the underside, so it reads upright once the sheet is turned
@@ -351,7 +364,7 @@ function start(data) {
     const draw = () => {
       const g = c.getContext('2d'); g.clearRect(0, 0, 512, 96);
       g.fillStyle = 'rgba(240, 243, 248, 0.95)';
-      g.font = '700 54px "Shippori Mincho", "Hiragino Mincho ProN", serif';
+      g.font = '400 50px "Noto Sans JP", "Hiragino Sans", sans-serif';
       g.textBaseline = 'middle'; g.fillText(text, 6, 50); tex.needsUpdate = true;
     };
     draw(); document.fonts?.ready.then(draw);
@@ -407,13 +420,16 @@ function start(data) {
 
     leaf.pivot.position.y = THREE.MathUtils.lerp((N - 1 - i) * T, (i + 1) * T, e);
     const flying = leaf.p > 0 && leaf.p < 1;
-    const rank = flying ? 60 : Math.round(leaf.pivot.position.y / T);       // draw lower sheets first, the sheet in the air last
+    const rank = flying ? 100 : Math.round(leaf.pivot.position.y / T);       // draw lower sheets first, the sheet in the air last
     // Unread sheets lie loosely on one another, and thin paper that is not pressed flat looks cloudy.
     // Once a sheet is turned and laid on the land it clears.
     const rest = THREE.MathUtils.lerp(haze, sheer, leaf.p);
     leaf.film.material.opacity = rest + (Math.max(0.62, rest) - rest) * Math.sin(Math.PI * leaf.p) ** 0.6;
     leaf.dye.color.copy(WHITE).lerp(dyeColor, THREE.MathUtils.lerp(1 - haze, 1, Math.min(1, leaf.p * 4)));
-    leaf.film.renderOrder = 10 + 2 * rank; leaf.mesh.renderOrder = 11 + 2 * rank; leaf.mark.renderOrder = 200;
+    leaf.cover.color.copy(WHITE).lerp(PALE, THREE.MathUtils.lerp(1 - haze, 1, Math.min(1, leaf.p * 4)));
+    // on the turned pile a sheet covers only where no water lies under it yet; elsewhere each sheet covers on its own
+    leaf.cover.stencilRef = leaf.dye.stencilRef = leaf.p > 0.5 ? 1 : 2 + i;
+    leaf.film.renderOrder = 10 + 3 * rank; leaf.lid.renderOrder = 11 + 3 * rank; leaf.mesh.renderOrder = 12 + 3 * rank; leaf.mark.renderOrder = 400;
   }
   function showMarks() {                  // sheets are sheer, so only the top turned sheet shows its printed level
     let topTurned = -1;
@@ -519,15 +535,15 @@ function start(data) {
     T = v.thick / 100; SOFT = v.soft / 10;
     sheer = v.sheer / 100; haze = v.haze / 100;
     const d = v.dye / 100;
-    dyeColor.setRGB(1 - d, 1 - d * 0.58, 1 - d * 0.12, THREE.SRGBColorSpace);
-    seaColor.setRGB((1 - d) ** 3, (1 - d * 0.58) ** 3, (1 - d * 0.12) ** 3, THREE.SRGBColorSpace);
+    dyeColor.setRGB(1 - d * 0.285, 1 - d * 0.196, 1 - d * 0.13, THREE.SRGBColorSpace);
+    seaColor.setRGB(0.663 * (1 - d * 0.285) ** 3, 0.749 * (1 - d * 0.196) ** 3, 0.839 * (1 - d * 0.13) ** 3, THREE.SRGBColorSpace);
     leaves.forEach(applyLeaf);
     for (const k of LOOK) { const o = document.querySelector(`output[for="${k}"]`); if (o) o.textContent = v[k]; }
     $('vals').textContent = LOOK.map((k) => `${k}=${v[k]}`).join(' ');
-    try { localStorage.setItem('suii-look-10', JSON.stringify(v)); } catch (e) { /* storage is optional */ }
+    try { localStorage.setItem('suii-look-11', JSON.stringify(v)); } catch (e) { /* storage is optional */ }
   }
   try {
-    const saved = JSON.parse(localStorage.getItem('suii-look-10') || 'null');
+    const saved = JSON.parse(localStorage.getItem('suii-look-11') || 'null');
     if (saved) for (const k of LOOK) if (Number.isFinite(saved[k])) $(k).value = saved[k];
   } catch (e) { /* storage is optional */ }
   for (const k of LOOK) on($(k), 'input', applyLook);
@@ -551,7 +567,7 @@ function start(data) {
     const lv = levels[turned - 1];
     $('lvl').textContent = labelOf(lv.level);
     $('lvlSub').textContent = lv.level === null
-      ? 'いまの海岸線。藍は海と川だけ'
+      ? 'いまの海岸線。青は海と川だけ'
       : `水が届く陸地 ${Math.round(lv.below_km2)} km²（範囲内の陸地 ${Math.round(land_km2)} km² の ${Math.round((lv.below_km2 / land_km2) * 100)}%）`;
     $('older').disabled = turned === 1;
     $('newer').disabled = turned === N;

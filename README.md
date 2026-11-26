@@ -36,4 +36,5 @@
 ## 構成
 
 - `index.html` — 表示と操作（three.js 0.160.0 を CDN から読み込みます）
+- `tokushima.png` / `sendai.png` — 台紙に刷る標高の濃淡（1m刻み、低いほど濃い灰色）
 - `tokushima.json` / `sendai.json` — 場所ごとの、水位ごとの土地の輪郭と地名
